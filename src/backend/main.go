@@ -4,7 +4,7 @@ package main
 import (
     "encoding/json"
     "net/http"
-    "log"
+    // "log"
 )
 
 type Message struct {
@@ -25,8 +25,8 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func main() {
-    http.HandleFunc("/api/hello", HelloHandler)
-    log.Println("Server running on :8080")
-    http.ListenAndServe(":8080", nil)
-}
+// func main() {
+//     http.HandleFunc("/api/hello", HelloHandler)
+//     log.Println("Server running on :8080")
+//     http.ListenAndServe(":8080", nil)
+// }
