@@ -35,7 +35,7 @@ func getCombination(element1, element2 string) (string, bool) {
 }
 
 // Fungsi utama BFS
-func findPathToTarget(target string) ([]string, bool) {
+func findWithBFS(target string) ([]string, bool) {
 	initialElements := []string{"fire", "water", "earth", "air"}
 
 	// Antrian BFS
@@ -88,4 +88,41 @@ func findPathToTarget(target string) ([]string, bool) {
 	}
 
 	return nil, false
+}
+
+// ✅ DFS implementation
+func findWithDFS(target string) ([]string, bool) {
+	startElements := []string{"fire", "water", "earth", "air"}
+	visited := make(map[string]bool)
+	steps := []string{}
+	pathFound := dfsHelper(startElements, target, visited, &steps)
+	return steps, pathFound
+}
+
+func dfsHelper(current []string, target string, visited map[string]bool, steps *[]string) bool {
+	// Check if target already in current state
+	for _, el := range current {
+		if el == target {
+			return true
+		}
+	}
+
+	for i := 0; i < len(current); i++ {
+		for j := i + 1; j < len(current); j++ {
+			a, b := current[i], current[j]
+			combined, ok := getCombination(a, b)
+			if ok && !visited[combined] {
+				visited[combined] = true
+				*steps = append(*steps, fmt.Sprintf("%s + %s => %s", a, b, combined))
+				newState := append([]string{combined}, current...)
+				if dfsHelper(newState, target, visited, steps) {
+					return true
+				}
+				// Backtrack
+				*steps = (*steps)[:len(*steps)-1]
+			}
+		}
+	}
+
+	return false
 }

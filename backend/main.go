@@ -48,7 +48,18 @@ func main() {
 			c.JSON(400, gin.H{"error": "Target tidak boleh kosong"})
 			return
 		}
-		path, found := findPathToTarget(strings.ToLower(target))
+		method := strings.ToLower(c.Query("method"))
+		if method == "" {
+			c.JSON(400, gin.H{"error": "Method tidak boleh kosong"})
+			return
+		}
+		var path []string
+		var found bool
+		if method == "bfs" {
+			path, found = findWithBFS(strings.ToLower(target))
+		} else {
+			path, found = findWithDFS(strings.ToLower(target))
+		}
 		if found {
 			c.JSON(200, gin.H{
 				"found": true,
