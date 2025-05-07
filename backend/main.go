@@ -43,18 +43,23 @@ func main() {
 	}) 
 
 	r.GET("/find", func(c *gin.Context) {
-		target := strings.ToLower(c.Query("target"))
-		path, found := bfsFindTarget(target)
+		target := c.Query("target")
+		if target == "" {
+			c.JSON(400, gin.H{"error": "Target tidak boleh kosong"})
+			return
+		}
+		path, found := findPathToTarget(strings.ToLower(target))
 		if found {
 			c.JSON(200, gin.H{
 				"found": true,
-				"path":path,
+				"steps": path,
 			})
 		} else {
 			c.JSON(200, gin.H{
-				"found":false,
+				"found": false,
+				"steps": []string{},
 			})
 		}
-	})
+	})	
 	r.Run(":8080")
 }

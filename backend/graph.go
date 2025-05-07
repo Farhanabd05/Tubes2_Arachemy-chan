@@ -4,8 +4,12 @@ package main
 // import "strings"
 import (
 	"fmt"
-	"strings"
 )
+
+type State struct {
+	Elements map[string]bool
+	Path []string
+}
 var combinations = map[[2]string]string{
 	normalize("fire", "air"):    "energy",
 	normalize("water", "earth"): "mud",
@@ -30,72 +34,58 @@ func getCombination(element1, element2 string) (string, bool) {
 	return result, exists
 }
 
-func bfsFindTarget(target string) ([]string, bool) {
-	type State struct {
-		Known []string
-		Path  []string
+// Fungsi utama BFS
+func findPathToTarget(target string) ([]string, bool) {
+	initialElements := []string{"fire", "water", "earth", "air"}
+
+	// Antrian BFS
+	queue := []State{
+		{
+			Elements: sliceToSet(initialElements),
+			Path:     []string{},
+		},
 	}
 
-	initial := []string{"fire", "water", "earth", "air"}
-	visited := map[string]bool{}
-	seenComb := map[string]bool{}
-	queue := []State {
-		{Known: initial, Path: []string{}},
-	}
-
-	fmt.Println("🔍 Mencari kombinasi menuju:", target)
-	fmt.Println("🌱 Elemen dasar:", initial)
+	// Set untuk mengecek state yang sudah dikunjungi
+	visitedStates := map[string]bool{}
 
 	for len(queue) > 0 {
-		curr := queue[0]
+		current := queue[0]
 		queue = queue[1:]
 
-		fmt.Println("🔄 State sekarang:", curr.Known)
-		for i := 0; i < len(curr.Known); i++ {
-			for j := i + 1; j < len(curr.Known); j++ {
-				a := curr.Known[i]
-				b := curr.Known[j]
-				key := normalize(a, b)
-				keyStr := key[0] + "+" + key[1]
+		// Jika sudah ditemukan
+		if current.Elements[target] {
+			return current.Path, true
+		}
 
-				if seenComb[keyStr] {
-					continue
+		stateKey := stateToKey(current.Elements)
+		if visitedStates[stateKey] {
+			continue
+		}
+		visitedStates[stateKey] = true
+
+		elements := keys(current.Elements)
+
+		// Coba semua kombinasi dari elemen yang ada saat ini
+		for i := 0; i < len(elements); i++ {
+			for j := i + 1; j < len(elements); j++ {
+				e1, e2 := elements[i], elements[j]
+				comb, ok := getCombination(e1, e2)
+				if ok && !current.Elements[comb] {
+					newElements := copySet(current.Elements)
+					newElements[comb] = true
+
+					newPath := append([]string{}, current.Path...)
+					newPath = append(newPath, fmt.Sprintf("%s + %s = %s", e1, e2, comb))
+
+					queue = append(queue, State{
+						Elements: newElements,
+						Path:     newPath,
+					})
 				}
-				seenComb[keyStr] = true
-
-				res, ok := getCombination(a, b)
-				fmt.Printf("🔧 Mencoba: %s + %s → ", a, b)
-				if ok {
-					fmt.Printf("%s\n", res)
-				} else {
-					fmt.Println("tidak valid")
-					continue
-				}
-
-				if visited[res] {
-					fmt.Println("⛔ Sudah pernah ditemukan:", res)
-					continue
-				}
-
-				if strings.EqualFold(res, target) {
-					fmt.Println("🎯 Target ditemukan:", res)
-					return append(curr.Path, fmt.Sprintf("%s + %s = %s", a, b, res)), true
-				}
-
-				visited[res] = true
-				newKnown := append([]string{}, curr.Known...)
-				newKnown = append(newKnown, res)
-
-				newPath := append([]string{}, curr.Path...)
-				newPath = append(newPath, fmt.Sprintf("%s + %s = %s", a, b, res))
-
-				queue = append(queue, State{
-					Known: newKnown,
-					Path:  newPath,
-				})
 			}
 		}
 	}
-	fmt.Println("❌ Tidak ditemukan jalur menuju target:", target)
+
 	return nil, false
 }

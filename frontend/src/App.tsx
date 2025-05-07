@@ -1,11 +1,53 @@
-import React from 'react';
-import SearchForm from './components/SearchForm';
+import { useState } from 'react';
+import './App.css';
 
-const App: React.FC = () => {
+function App() {
+  const [target, setTarget] = useState('');
+  const [result, setResult] = useState<string[] | null>(null);
+  const [found, setFound] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const findCombination = async () => {
+    if (!target) return;
+
+    setLoading(true);
+    setResult(null);
+    setFound(null);
+
+    try {
+      const res = await fetch(`http://localhost:8080/find?target=${target}`);
+      const data = await res.json();
+      setResult(data.steps);
+      setFound(data.found);
+    } catch (error) {
+      console.error('❌ Error:', error);
+      setFound(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="p-8 font-sans">
-      <h1 className="text-2xl font-bold mb-4">Little Alchemy Search</h1>
-      <SearchForm />
+    <div className="App">
+      <h1>🔍 Cari Kombinasi Elemen</h1>
+      <input
+        value={target}
+        onChange={(e) => setTarget(e.target.value)}
+        placeholder="Contoh: human"
+      />
+      <button onClick={findCombination}>Cari</button>
+      {loading && <p>⏳ Mencari...</p>}
+      {found === false && <p>❌ Tidak ditemukan</p>}
+      {found && result && (
+        <div>
+          <h2>✅ Ditemukan!</h2>
+          <ol>
+            {result.map((step, i) => (
+              <li key={i}>🧪 {step}</li>
+            ))}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }

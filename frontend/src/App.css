@@ -40,3 +40,14 @@
 .read-the-docs {
   color: #888;
 }
+
+input {
+  padding: 0.5rem;
+  margin-right: 1rem;
+  width: 200px;
+}
+
+ol {
+  text-align: left;
+  margin-top: 1rem;
+}
