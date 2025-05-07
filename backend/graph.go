@@ -32,7 +32,7 @@ func getCombination(element1, element2 string) (string, bool) {
 
 func bfsFindTarget(target string) ([]string, bool) {
 	type State struct {
-		Elements []string
+		Known []string
 		Path  []string
 	}
 
