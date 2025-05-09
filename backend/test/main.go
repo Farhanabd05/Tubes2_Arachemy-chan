@@ -39,7 +39,7 @@ type RecipeType struct {
 	ImgUrl2     string
 	Ingredient1 string
 	Ingredient2 string
-	Type        ElementType
+	Type        int
 }
 
 func getElementType(index int) ElementType {
@@ -84,6 +84,25 @@ func getElementType(index int) ElementType {
 	}
 }
 
+var elementTypeMap = map[ElementType]int{
+    "Starting": 0,
+    "Tier1":    1,
+    "Tier2":    2,
+	"Tier3":    3,
+	"Tier4":    4,
+	"Tier5":    5,
+	"Tier6":    6,
+	"Tier7":    7,
+	"Tier8":    8,
+	"Tier9":    9,
+	"Tier10":   10,
+	"Tier11":   11,
+	"Tier12":   12,
+	"Tier13":   13,
+	"Tier14":   14,
+	"Tier15":   15,
+}
+
 func ScrapeHandler(ctx *gin.Context) {
 	url := "https://little-alchemy.fandom.com/wiki/Elements_(Little_Alchemy_2)"
 	var recipes []RecipeType
@@ -126,7 +145,7 @@ func ScrapeHandler(ctx *gin.Context) {
 					ImgUrl2:     imgUrl2,
 					Ingredient1: ingredient1,
 					Ingredient2: ingredient2,
-					Type:        elementType,
+					Type:        elementTypeMap[elementType],
 				}
 				recipes = append(recipes, r)
 			})
