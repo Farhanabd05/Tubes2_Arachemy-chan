@@ -39,18 +39,68 @@ type RecipeType struct {
 	ImgUrl2     string
 	Ingredient1 string
 	Ingredient2 string
-	Type        ElementType
+	Type        int
 }
 
 func getElementType(index int) ElementType {
-	elementTypes := []ElementType{
-		Starting, "", Tier1, Tier2, Tier3, Tier4, Tier5, Tier6, Tier7,
-		Tier8, Tier9, Tier10, Tier11, Tier12, Tier13, Tier14, Tier15,
-	}
-	if index < 1 || index > len(elementTypes) {
+	switch index {
+	case 1:
+		return Starting
+	case 2:
+		// Skip (Ruins/Archeologist)
+		return ""
+	case 3:
+		return Tier1
+	case 4:
+		return Tier2
+	case 5:
+		return Tier3
+	case 6:
+		return Tier4
+	case 7:
+		return Tier5
+	case 8:
+		return Tier6
+	case 9:
+		return Tier7
+	case 10:
+		return Tier8
+	case 11:
+		return Tier9
+	case 12:
+		return Tier10
+	case 13:
+		return Tier11
+	case 14:
+		return Tier12
+	case 15:
+		return Tier13
+	case 16:
+		return Tier14
+	case 17:
+		return Tier15
+	default:
 		return ""
 	}
-	return elementTypes[index-1]
+}
+
+var elementTypeMap = map[ElementType]int{
+    "Starting": 0,
+    "Tier1":    1,
+    "Tier2":    2,
+	"Tier3":    3,
+	"Tier4":    4,
+	"Tier5":    5,
+	"Tier6":    6,
+	"Tier7":    7,
+	"Tier8":    8,
+	"Tier9":    9,
+	"Tier10":   10,
+	"Tier11":   11,
+	"Tier12":   12,
+	"Tier13":   13,
+	"Tier14":   14,
+	"Tier15":   15,
 }
 
 func ScrapeHandler(ctx *gin.Context) {
@@ -95,7 +145,7 @@ func ScrapeHandler(ctx *gin.Context) {
 					ImgUrl2:     imgUrl2,
 					Ingredient1: ingredient1,
 					Ingredient2: ingredient2,
-					Type:        elementType,
+					Type:        elementTypeMap[elementType],
 				}
 				recipes = append(recipes, r)
 			})
