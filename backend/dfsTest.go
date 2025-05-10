@@ -38,7 +38,7 @@ func dfsSinglePath(element string, visited map[string]bool, trace []string) ([]s
 		// skip if ingredient tier >= element tier
 		ingrTier1 := tierMap[ingr[0]]
 		ingrTier2 := tierMap[ingr[1]]
-		if ingrTier1 > elementTier || ingrTier2 > elementTier {
+		if ingrTier1 >= elementTier || ingrTier2 >= elementTier {
 			if printCount < maxPrints {
 				fmt.Printf("Skipping recipe due to tier: %s + %s = %s\n", ingr[0], ingr[1], element)
 			}

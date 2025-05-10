@@ -69,7 +69,7 @@ func dfsMulPath(element string, visited map[string]bool, trace []string, maxPath
         // Skip jika tier bahan >= tier elemen
         ingrTier1 := tierMap[ingr[0]]
         ingrTier2 := tierMap[ingr[1]]
-        if ingrTier1 > elementTier || ingrTier2 > elementTier {
+        if ingrTier1 >= elementTier || ingrTier2 >= elementTier {
             continue
         }
         
