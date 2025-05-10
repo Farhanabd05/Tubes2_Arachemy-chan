@@ -5,12 +5,13 @@ import (
 	// "log"
 	// "os"
 	// "time"
+	"encoding/json"
 	"strings"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	// "github.com/go-redis/redis/v8"
 )
-
 
 func main() {
 	r := gin.Default()
@@ -19,58 +20,42 @@ func main() {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
-	r.GET("/search", func(c * gin.Context) {
-		el1 := c.Query(("e1"))
-		el2 := c.Query(("e2"))
-
-		el1 = strings.ToLower((el1))
-		el2 = strings.ToLower((el2))
-
-		result, ok := getCombination(el1, el2)
-		// if !ok {
-		// 	result, ok := comb[[2]string{el2, el1}]
-		// }
-		if ok {
-			c.JSON(200, gin.H{
-				"found": true,
-				"result" : result,
-			})
-		} else {
-			c.JSON(200, gin.H{
-				"found" : false,
-			})
-		}
-	}) 
-
-	r.GET("/find", func(c *gin.Context) {
+	r.GET("/singlepath", func(c *gin.Context) {
 		target := c.Query("target")
 		if target == "" {
 			c.JSON(400, gin.H{"error": "Target tidak boleh kosong"})
 			return
 		}
-		method := strings.ToLower(c.Query("method"))
+		method := c.Query("method")
 		if method == "" {
 			c.JSON(400, gin.H{"error": "Method tidak boleh kosong"})
 			return
 		}
-		var path []string
-		var found bool
+		recipes, err := loadRecipes("test/data/recipes.json")
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Error loading recipes: " + err.Error()})
+			return
+		}
+		buildRecipeMap(recipes)
 		if method == "bfs" {
-			path, found = findWithBFS(strings.ToLower(target))
-		} else {
-			path, found = findWithDFS(strings.ToLower(target))
+			steps, ok := bfsSinglePath(strings.ToLower(target))
+			result := Result{
+				Found: ok,
+				Steps: steps,
+			}
+			jsonResult, _ := json.Marshal(result)
+			c.Data(200, "application/json", jsonResult)
+			return
+		} else if (method == "dfs") {
+			steps, ok := dfsSinglePath(strings.ToLower(target), map[string]bool{}, []string{})
+			result := Result{
+				Found: ok,
+				Steps: steps,
+			}
+			jsonResult, _ := json.Marshal(result)
+			c.Data(200, "application/json", jsonResult)
+			return
 		}
-		if found {
-			c.JSON(200, gin.H{
-				"found": true,
-				"steps": path,
-			})
-		} else {
-			c.JSON(200, gin.H{
-				"found": false,
-				"steps": []string{},
-			})
-		}
-	})	
+	})
 	r.Run(":8080")
 }
