@@ -47,6 +47,8 @@ var (
 		"fire": true, "water": true, "earth": true, "air": true, "time": true,
 	}
 	mutex sync.RWMutex // For thread-safe access to recipe maps
+	printCount = 0
+	maxPrints  = 200
 )
 
 // loadRecipes loads recipe data from a JSON file
