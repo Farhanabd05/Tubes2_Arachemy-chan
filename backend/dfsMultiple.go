@@ -44,6 +44,70 @@ func StartDFSMultipleWorkerPool(numWorkers int) (chan<- DFSMultipleJob, <-chan D
     return jobs, results
 }
 
+func dfsMulPath(element string, visited map[string]bool, trace []string, maxPaths int, pathCollection *[][]string) bool {
+    if baseElements[element] {
+        // Untuk elemen dasar, tambahkan path kosong
+        *pathCollection = append(*pathCollection, []string{})
+        return true
+    }
+
+    if visited[element] {
+        return false
+    }
+
+    visited[element] = true
+    recipes, ok := recipesMap[element]
+    if !ok {
+        return false
+    }
+
+    foundAnyPath := false
+    elementTier := tierMap[element]
+    
+    // Cek setiap resep yang mungkin
+    for _, ingr := range recipes {
+        // Skip jika tier bahan >= tier elemen
+        ingrTier1 := tierMap[ingr[0]]
+        ingrTier2 := tierMap[ingr[1]]
+        if ingrTier1 > elementTier || ingrTier2 > elementTier {
+            continue
+        }
+        
+        // Kumpulkan path untuk ingredient pertama
+        leftPaths := [][]string{}
+        newVisited1 := copyMap(visited)
+        if dfsMulPath(ingr[0], newVisited1, append(trace, element), maxPaths, &leftPaths) {
+            // Kumpulkan path untuk ingredient kedua
+            rightPaths := [][]string{}
+            newVisited2 := copyMap(visited)
+            if dfsMulPath(ingr[1], newVisited2, append(trace, element), maxPaths, &rightPaths) {
+                // Kombinasikan path dari kedua ingredient
+                for _, left := range leftPaths {
+                    for _, right := range rightPaths {
+                        if len(*pathCollection) >= maxPaths {
+                            break
+                        }
+                        combined := append(append([]string{}, left...), right...)
+                        combined = append(combined, fmt.Sprintf("%s + %s = %s", ingr[0], ingr[1], element))
+                        *pathCollection = append(*pathCollection, combined)
+                        foundAnyPath = true
+                    }
+                    if len(*pathCollection) >= maxPaths {
+                        break
+                    }
+                }
+            }
+        }
+        
+        if len(*pathCollection) >= maxPaths {
+            break
+        }
+    }
+    
+    return foundAnyPath
+}
+
+
 // dfsMultiplePathsTopLevel mencari multiple path menggunakan DFS terparalel di level atas
 func dfsMultiplePathsTopLevel(target string, maxPaths int) ([][]string, bool) {
     target = strings.ToLower(target)
@@ -53,97 +117,14 @@ func dfsMultiplePathsTopLevel(target string, maxPaths int) ([][]string, bool) {
         return [][]string{{}}, true
     }
     
-    // Dapatkan resep untuk target
-    mutex.RLock()
-    recipes, ok := recipesMap[target]
-    elementTier := tierMap[target]
-    mutex.RUnlock()
+    // Kumpulkan semua path
+    visited := make(map[string]bool)
+    allPaths := [][]string{}
     
-    if !ok {
-        return [][]string{}, false
-    }
+    // Panggil fungsi dfsSinglePath yang telah dimodifikasi
+    success := dfsMulPath(target, visited, []string{}, maxPaths, &allPaths)
     
-    // Buat channel untuk mengumpulkan path
-    pathChan := make(chan []string, maxPaths*2)
-    
-    // Buat wait group untuk goroutines
-    var wg sync.WaitGroup
-    
-    // Buat mutex untuk melindungi pathCount
-    var pathCountMutex sync.Mutex
-    pathCount := 0
-    
-    // Filter resep valid
-    validRecipes := [][]string{}
-    for _, ingr := range recipes {
-        // Skip jika tier ingredient >= tier elemen
-        mutex.RLock()
-        ingrTier1 := tierMap[ingr[0]]
-        ingrTier2 := tierMap[ingr[1]]
-        mutex.RUnlock()
-        
-        if ingrTier1 > elementTier || ingrTier2 > elementTier {
-            continue
-        }
-        
-        validRecipes = append(validRecipes, ingr)
-    }
-    
-    // Mulai goroutine untuk setiap resep valid
-    for _, recipe := range validRecipes {
-        wg.Add(1)
-        go func(recipe []string) {
-            defer wg.Done()
-            
-            // Reset print counter
-            printCount = 0
-            
-            // Coba mencari path untuk kedua ingredient
-            visited1 := make(map[string]bool)
-            path1, found1 := dfsSinglePath(recipe[0], visited1, []string{})
-            
-            if !found1 {
-                return
-            }
-            
-            visited2 := make(map[string]bool)
-            path2, found2 := dfsSinglePath(recipe[1], visited2, []string{})
-            
-            if !found2 {
-                return
-            }
-            
-            // Gabungkan path
-            combinedPath := append(path1, path2...)
-            combinedPath = append(combinedPath, fmt.Sprintf("%s + %s = %s", recipe[0], recipe[1], target))
-            
-            // Cek apakah sudah cukup paths
-            pathCountMutex.Lock()
-            if pathCount < maxPaths {
-                // Kirim path ke channel
-                pathChan <- combinedPath
-                pathCount++
-            }
-            pathCountMutex.Unlock()
-        }(recipe)
-    }
-    
-    // Tunggu semua goroutine selesai dan tutup path channel
-    go func() {
-        wg.Wait()
-        close(pathChan)
-    }()
-    
-    // Kumpulkan path
-    var paths [][]string
-    for path := range pathChan {
-        paths = append(paths, path)
-        if len(paths) >= maxPaths {
-            break
-        }
-    }
-    
-    return paths, len(paths) > 0
+    return allPaths, success && len(allPaths) > 0
 }
 
 
