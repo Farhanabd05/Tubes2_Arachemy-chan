@@ -6,6 +6,7 @@ import (
 	// "os"
 	// "time"
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/gin-contrib/cors"
@@ -20,7 +21,7 @@ func main() {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
-	r.GET("/singlepath", func(c *gin.Context) {
+	r.GET("/find", func(c *gin.Context) {
 		target := c.Query("target")
 		if target == "" {
 			c.JSON(400, gin.H{"error": "Target tidak boleh kosong"})
@@ -31,13 +32,32 @@ func main() {
 			c.JSON(400, gin.H{"error": "Method tidak boleh kosong"})
 			return
 		}
+
+		if method != "bfs" && method != "dfs" {
+			c.JSON(400, gin.H{"error": "Method tidak valid"})
+			return
+		}
+
+		numberRecipe := c.Query("numberRecipe")
+		if numberRecipe == "" {
+			c.JSON(400, gin.H{"error": "Number recipe tidak boleh kosong"})
+			return
+		}
+
 		recipes, err := loadRecipes("test/data/recipes.json")
 		if err != nil {
 			c.JSON(500, gin.H{"error": "Error loading recipes: " + err.Error()})
 			return
 		}
 		buildRecipeMap(recipes)
-		if method == "bfs" {
+
+		numberRecipeInt, err := strconv.Atoi(numberRecipe)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid numberRecipe value"})
+			return
+		}
+
+		if method == "bfs" && numberRecipeInt == 1 {
 			steps, ok := bfsSinglePath(strings.ToLower(target))
 			result := Result{
 				Found: ok,
@@ -46,7 +66,7 @@ func main() {
 			jsonResult, _ := json.Marshal(result)
 			c.Data(200, "application/json", jsonResult)
 			return
-		} else if (method == "dfs") {
+		} else if (method == "dfs") && numberRecipeInt == 1 {
 			steps, ok := dfsSinglePath(strings.ToLower(target), map[string]bool{}, []string{})
 			result := Result{
 				Found: ok,
