@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -62,19 +63,23 @@ func main() {
 		numWorkers := runtime.NumCPU() 
 		if numberRecipeInt == 1 {
 			if method == "bfs" {
-				steps, ok := bfsSinglePath(strings.ToLower(target))
+				steps, ok, runtimes, nodes := bfsSinglePath(strings.ToLower(target))
 				result := Result{
 					Found: ok,
 					Steps: steps,
+					Runtime: runtimes,
+					NodesVisited: nodes,
 				}
 				jsonResult, _ := json.Marshal(result)
 				c.Data(200, "application/json", jsonResult)
 				return
 			} else if (method == "dfs") {
-				steps, ok := dfsSinglePath(strings.ToLower(target), map[string]bool{}, []string{})
+				steps, ok, runtime, nodesVisited := DFSWrapper(strings.ToLower(target))
 				result := Result{
 					Found: ok,
 					Steps: steps,
+					Runtime: runtime,
+					NodesVisited: nodesVisited,
 				}
 				jsonResult, _ := json.Marshal(result)
 				c.Data(200, "application/json", jsonResult)
@@ -94,6 +99,7 @@ func main() {
 				}
 					close(bfsJobs)
 				}()
+				
 				resultsJSON := make([]map[string][]string, 0)
 				for result := range bfsResults {
 					if result.Found {
@@ -101,9 +107,12 @@ func main() {
 							pathJSON := make(map[string][]string)
 							pathJSON[fmt.Sprintf("Path %d", i+1)] = path
 							resultsJSON = append(resultsJSON, pathJSON)
+							resultsJSON[i]["Runtime"] = []string{result.Runtime.String()}
+							resultsJSON[i]["NodesVisited"] = []string{strconv.Itoa(result.NodesVisited)}
 						}
 					}
 				}
+				//
 				jsonResult, _ := json.Marshal(resultsJSON)
 				c.Data(200, "application/json", jsonResult)
 				return
@@ -120,12 +129,16 @@ func main() {
 				resultsJSON := make([]map[string][]string, 0)
 				for result := range dfsResults {
 					if result.Found {
+						var totalRuntime time.Duration = result.Runtime
+        				var totalNodes int = result.NodesVisited
 						for i, path := range result.Paths {
 							pathJSON := make(map[string][]string)
 							pathJSON[fmt.Sprintf("Path %d", i+1)] = path
 							resultsJSON = append(resultsJSON, pathJSON)
+							resultsJSON[i]["Runtime"] = []string{totalRuntime.String()}
+							resultsJSON[i]["NodesVisited"] = []string{strconv.Itoa(totalNodes)}
 						}
-					}
+					}	
 				}
 				jsonResult, _ := json.Marshal(resultsJSON)
 				c.Data(200, "application/json", jsonResult)

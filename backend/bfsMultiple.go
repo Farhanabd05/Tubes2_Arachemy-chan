@@ -20,15 +20,16 @@ type BFSMultipleResult struct {
     Paths    [][]string
     Found    bool
     JobID    int
-    Duration time.Duration
+    Runtime time.Duration `json:"runtime"`
+    NodesVisited int           `json:"nodesVisited"`
 }
 
-func bfsMultiplePaths(target string, maxPaths int) ([][]string, bool) {
+func bfsMultiplePaths(target string, maxPaths int) ([][]string, bool, int) {
     target = strings.ToLower(target)
-    
+    nodesVisited := 0
     // Cek apakah target adalah elemen dasar
     if baseElements[target] {
-        return [][]string{{}}, true
+        return [][]string{{}}, true, 0
     }
     
     // Untuk menyimpan multiple path ke setiap elemen
@@ -39,6 +40,7 @@ func bfsMultiplePaths(target string, maxPaths int) ([][]string, bool) {
     for base := range baseElements {
         discovered[base] = true
         pathsToElement[base] = [][]string{{}} // Empty path untuk elemen dasar
+        nodesVisited++
     }
     
     // Implementasi BFS
@@ -102,11 +104,11 @@ func bfsMultiplePaths(target string, maxPaths int) ([][]string, bool) {
                 pathsToElement[resultElement] = pathsForElement
                 discovered[resultElement] = true
                 newDiscoveries = true
-                
+                nodesVisited++
                 // Cek apakah ini target
                 if resultElement == target {
                     mutex.RUnlock()
-                    return pathsForElement[:min(len(pathsForElement), maxPaths)], true
+                    return pathsForElement[:min(len(pathsForElement), maxPaths)], true, nodesVisited
                 }
             }
         }
@@ -121,10 +123,10 @@ func bfsMultiplePaths(target string, maxPaths int) ([][]string, bool) {
     
     // Return path jika target ditemukan
     if paths, ok := pathsToElement[target]; ok {
-        return paths[:min(len(paths), maxPaths)], true
+        return paths[:min(len(paths), maxPaths)], true, nodesVisited
     }
     
-    return [][]string{}, false
+    return [][]string{}, false, nodesVisited
 }
 
 // Worker yang memproses job BFS untuk multiple path
@@ -138,7 +140,7 @@ func bfsMultiplePathsWorker(id int, jobs <-chan BFSMultipleJob, results chan<- B
                   id, job.JobID, job.Target, job.MaxPaths)
         
         // Pencarian multiple paths menggunakan BFS
-        paths, found := bfsMultiplePaths(job.Target, job.MaxPaths)
+        paths, found, nodes := bfsMultiplePaths(job.Target, job.MaxPaths)
         
         duration := time.Since(startTime)
         
@@ -147,7 +149,8 @@ func bfsMultiplePathsWorker(id int, jobs <-chan BFSMultipleJob, results chan<- B
             Paths:    paths,
             Found:    found,
             JobID:    job.JobID,
-            Duration: duration,
+            Runtime: duration,
+            NodesVisited: nodes,
         }
     }
 }

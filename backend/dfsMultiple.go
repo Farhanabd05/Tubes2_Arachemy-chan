@@ -20,7 +20,8 @@ type DFSMultipleResult struct {
     Paths    [][]string
     Found    bool
     JobID    int
-    Duration time.Duration
+    Runtime time.Duration
+    NodesVisited int
 }
 
 // StartDFSMultipleWorkerPool memulai worker pool untuk pencarian multiple path DFS
@@ -44,7 +45,9 @@ func StartDFSMultipleWorkerPool(numWorkers int) (chan<- DFSMultipleJob, <-chan D
     return jobs, results
 }
 
-func dfsMulPath(element string, visited map[string]bool, trace []string, maxPaths int, pathCollection *[][]string) bool {
+func dfsMulPath(element string, visited map[string]bool, trace []string, maxPaths int, pathCollection *[][]string, nodesVisited *int) bool {
+    (*nodesVisited)++ // Increment node count for each node we process
+
     if baseElements[element] {
         // Untuk elemen dasar, tambahkan path kosong
         *pathCollection = append(*pathCollection, []string{})
@@ -76,11 +79,11 @@ func dfsMulPath(element string, visited map[string]bool, trace []string, maxPath
         // Kumpulkan path untuk ingredient pertama
         leftPaths := [][]string{}
         newVisited1 := copyMap(visited)
-        if dfsMulPath(ingr[0], newVisited1, append(trace, element), maxPaths, &leftPaths) {
+        if dfsMulPath(ingr[0], newVisited1, append(trace, element), maxPaths, &leftPaths, nodesVisited) {
             // Kumpulkan path untuk ingredient kedua
             rightPaths := [][]string{}
             newVisited2 := copyMap(visited)
-            if dfsMulPath(ingr[1], newVisited2, append(trace, element), maxPaths, &rightPaths) {
+            if dfsMulPath(ingr[1], newVisited2, append(trace, element), maxPaths, &rightPaths, nodesVisited) {
                 // Kombinasikan path dari kedua ingredient
                 for _, left := range leftPaths {
                     for _, right := range rightPaths {
@@ -109,12 +112,12 @@ func dfsMulPath(element string, visited map[string]bool, trace []string, maxPath
 
 
 // dfsMultiplePathsTopLevel mencari multiple path menggunakan DFS terparalel di level atas
-func dfsMultiplePathsTopLevel(target string, maxPaths int) ([][]string, bool) {
+func dfsMultiplePathsTopLevel(target string, maxPaths int) ([][]string, bool, int) {
     target = strings.ToLower(target)
-    
+    nodesVisited := 0 // Initialize node count
     // Cek apakah target adalah elemen dasar
     if baseElements[target] {
-        return [][]string{{}}, true
+        return [][]string{{}}, true, 1
     }
     
     // Kumpulkan semua path
@@ -122,9 +125,9 @@ func dfsMultiplePathsTopLevel(target string, maxPaths int) ([][]string, bool) {
     allPaths := [][]string{}
     
     // Panggil fungsi dfsSinglePath yang telah dimodifikasi
-    success := dfsMulPath(target, visited, []string{}, maxPaths, &allPaths)
+    success := dfsMulPath(target, visited, []string{}, maxPaths, &allPaths, &nodesVisited)
     
-    return allPaths, success && len(allPaths) > 0
+    return allPaths, success && len(allPaths) > 0, nodesVisited
 }
 
 
@@ -139,7 +142,7 @@ func dfsMultiplePathsWorker(id int, jobs <-chan DFSMultipleJob, results chan<- D
                   id, job.JobID, job.Target, job.MaxPaths)
         
         // Cari multiple path menggunakan DFS terparalel di level atas
-        paths, found := dfsMultiplePathsTopLevel(job.Target, job.MaxPaths)
+        paths, found, nodesVisited := dfsMultiplePathsTopLevel(job.Target, job.MaxPaths)
         
         duration := time.Since(startTime)
         results <- DFSMultipleResult{
@@ -147,7 +150,8 @@ func dfsMultiplePathsWorker(id int, jobs <-chan DFSMultipleJob, results chan<- D
             Paths:    paths,
             Found:    found,
             JobID:    job.JobID,
-            Duration: duration,
+            Runtime: duration,
+            NodesVisited: nodesVisited,
         }
     }
 }

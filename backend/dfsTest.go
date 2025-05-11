@@ -4,9 +4,11 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
-func dfsSinglePath(element string, visited map[string]bool, trace []string) ([]string, bool) {
+func dfsSinglePath(element string, visited map[string]bool, trace []string, nodesVisited *int) ([]string, bool) {
+	 *nodesVisited++
 	if printCount < maxPrints {
 		fmt.Println("Processing:", strings.Join(trace, " -> "), "->", element)
 		printCount++
@@ -49,11 +51,11 @@ func dfsSinglePath(element string, visited map[string]bool, trace []string) ([]s
 		}
 		newTrace := append([]string{}, trace...)
 		newTrace = append(newTrace, element)
-		leftSteps, ok1 := dfsSinglePath(ingr[0], copyMap(visited), newTrace)
+		leftSteps, ok1 := dfsSinglePath(ingr[0], copyMap(visited), newTrace, nodesVisited)
 		if !ok1 {
 			continue
 		}
-		rightSteps, ok2 := dfsSinglePath(ingr[1], copyMap(visited), newTrace)
+		rightSteps, ok2 := dfsSinglePath(ingr[1], copyMap(visited), newTrace, nodesVisited)
 		if !ok2 {
 			continue
 		}
@@ -63,6 +65,13 @@ func dfsSinglePath(element string, visited map[string]bool, trace []string) ([]s
 	}
 
 	return nil, false
+}
+
+func DFSWrapper(target string) ([]string, bool, time.Duration, int) {
+    start := time.Now()
+    nodesVisited := 0
+    steps, found := dfsSinglePath(strings.ToLower(target), make(map[string]bool), []string{}, &nodesVisited)
+    return steps, found, time.Since(start), nodesVisited
 }
 
 func copyMap(m map[string]bool) map[string]bool {

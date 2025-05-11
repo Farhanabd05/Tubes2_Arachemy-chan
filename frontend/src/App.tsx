@@ -4,9 +4,10 @@ import './App.css';
 interface SingleResult {
   found: boolean;
   steps: string[];
+
 }
 
-type PathObject = {[key: string] : string[]};
+type PathObject = { [key: string]: string[] };
 type MultipleResult = PathObject[];
 
 function App() {
@@ -16,6 +17,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [method, setMethod] = useState('');
   const [numberRecipe, setNumberRecipe] = useState('');
+  const [runtime, setRuntime] = useState('');
+  const [nodesVisited, setNodesVisited] = useState<number | null>(null);
   const findCombination = async () => {
     if (!target) return;
 
@@ -30,10 +33,12 @@ function App() {
       if (Array.isArray(data)) {
         setResult(data);
         setIsMultiple(true);
-      }else{
+      } else {
         setResult(data);
         setIsMultiple(false);
       }
+      if (data.runtime !== undefined) setRuntime(data.runtime);
+      if (data.nodesVisited !== undefined) setNodesVisited(data.nodesVisited);
     } catch (error) {
       console.error('❌ Error:', error);
       setResult({ found: false, steps: [] });
@@ -45,12 +50,27 @@ function App() {
 
   const isFound = () => {
     if (!result) return false;
-    
+
     if (isMultiple) {
       return (result as MultipleResult).length > 0;
     } else {
       return (result as SingleResult).found;
     }
+  };
+
+  
+  // Helper function to check if all paths have the same metric value
+    const checkAllSameMetric = (results: MultipleResult, metricKey: string): boolean => {
+    if (results.length === 0) return false;
+    const firstValue = results[0][metricKey]?.[0];
+    if (!firstValue) return false;
+    return results.every(item => item[metricKey]?.[0] === firstValue);
+  };
+
+    // Helper function to get common metric value
+  const getCommonMetric = (results: MultipleResult, metricKey: string): string | null => {
+    if (results.length === 0) return null;
+    return results[0][metricKey]?.[0] || null;
   };
 
   return (
@@ -61,7 +81,7 @@ function App() {
         onChange={(e) => setTarget(e.target.value)}
         placeholder="Contoh: human"
       />
-      <input 
+      <input
         value={method}
         onChange={(e) => setMethod(e.target.value)}
         placeholder="Contoh: bfs"
@@ -84,25 +104,48 @@ function App() {
               ))}
             </ul>
           )}
-
           {isMultiple && (
-            <div>
+            <div className="multiple-results">
               {(result as MultipleResult).map((pathObj, i) => {
-                const pathName = Object.keys(pathObj)[0];
+                const pathName = Object.keys(pathObj).find(key => key.startsWith('Path'));
 
-                const steps = pathObj[pathName];
+                var steps
+                if (pathName !== undefined) {
+                    steps = pathObj[pathName];
+                    // ...
+                  } else {
+                    // Handle the case where pathName is undefined
+                  }
+                  const runtime = pathObj['Runtime']?.[0] || '';
+                  const nodesVisited = pathObj['NodesVisited']?.[0] || '';
 
                 return (
                   <div key={i}>
                     <h3>{pathName}</h3>
                     <ul>
-                      {steps.map((steps, j) => (
+                      {steps?.map((steps, j) => (
                         <li key={j}>{j}. 🧪 {steps}</li>
                       ))}
                     </ul>
+                    {runtime && (
+                      <p><strong>Runtime:</strong> {runtime}</p>
+                    )}
+                    {nodesVisited && (
+                      <p><strong>Nodes Visited:</strong> {nodesVisited}</p>
+                    )}
                   </div>
                 )
               })}
+            </div>
+          )}
+          {runtime && (!isMultiple) && (
+            <div>
+              <strong>Runtime:</strong> {runtime} ns
+            </div>
+          )}
+          {nodesVisited !== null && (
+            <div>
+              <strong>Nodes Visited:</strong> {nodesVisited}
             </div>
           )}
         </div>
