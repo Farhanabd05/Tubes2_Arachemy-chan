@@ -1,61 +1,137 @@
 package main
 
 import (
+	// "context"
+	// "log"
+	// "os"
+	// "time"
+	"encoding/json"
 	"fmt"
 	"runtime"
+	"strconv"
+	"strings"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	// "github.com/go-redis/redis/v8"
 )
 
-
-
 func main() {
-    // Load recipes dan build data structure
-    recipesFile := "test/data/recipes.json"
-    recipes, err := loadRecipes(recipesFile)
-    if err != nil {
-        fmt.Printf("[FATAL] Error loading recipes: %v\n", err)
-        return
-    }
+	r := gin.Default()
+	r.Use(cors.Default())
 
-    buildRecipeMap(recipes)
-    buildReverseGraph()
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "pong"})
+	})
+	r.GET("/find", func(c *gin.Context) {
+		target := c.Query("target")
+		if target == "" {
+			c.JSON(400, gin.H{"error": "Target tidak boleh kosong"})
+			return
+		}
+		method := c.Query("method")
+		if method == "" {
+			c.JSON(400, gin.H{"error": "Method tidak boleh kosong"})
+			return
+		}
 
-    // Buat worker pool untuk DFS multiple paths
-    numWorkers := runtime.NumCPU() // Gunakan jumlah CPU yang tersedia
-    dfsJobs, dfsResults := StartDFSMultipleWorkerPool(numWorkers)
+		if method != "bfs" && method != "dfs" {
+			c.JSON(400, gin.H{"error": "Method tidak valid"})
+			return
+		}
 
-    // Submit jobs
-    targets := []string{"blade"}
-    maxPathsPerTarget := 5
+		numberRecipe := c.Query("numberRecipe")
+		if numberRecipe == "" {
+			c.JSON(400, gin.H{"error": "Number recipe tidak boleh kosong"})
+			return
+		}
 
-    go func() {
-        for i, target := range targets {
-            dfsJobs <- DFSMultipleJob{
-                Target:   target,
-                MaxPaths: maxPathsPerTarget,
-                JobID:    i + 1,
-            }
-        }
-        close(dfsJobs)
-    }()
+		recipes, err := loadRecipes("test/data/recipes.json")
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Error loading recipes: " + err.Error()})
+			return
+		}
+		buildRecipeMap(recipes)
 
-    // Process results
-    for result := range dfsResults {
-        if result.Found {
-            fmt.Printf("[Result] Target: %s - Found %d paths in %v using DFS\n",
-                result.Target, len(result.Paths), result.Duration)
-            // Tampilkan paths yang ditemukan
-            for i, path := range result.Paths {
-                fmt.Printf("Path %d: ", i+1)
-                for j, step := range path {
-                    if j > 0 {
-                        fmt.Print(" -> ")
-                    }
-                    fmt.Print(step)
-                }
-                fmt.Println()
-            }
-        } else {
-            fmt.Printf("[Result] Target: %s - No paths found using DFS\n", result.Target)
-        }
-    }
+		numberRecipeInt, err := strconv.Atoi(numberRecipe)
+		var  maxPathsPerTarget = numberRecipeInt
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid numberRecipe value"})
+			return
+		}
+		numWorkers := runtime.NumCPU() 
+		if numberRecipeInt == 1 {
+			if method == "bfs" {
+				steps, ok := bfsSinglePath(strings.ToLower(target))
+				result := Result{
+					Found: ok,
+					Steps: steps,
+				}
+				jsonResult, _ := json.Marshal(result)
+				c.Data(200, "application/json", jsonResult)
+				return
+			} else if (method == "dfs") {
+				steps, ok := dfsSinglePath(strings.ToLower(target), map[string]bool{}, []string{})
+				result := Result{
+					Found: ok,
+					Steps: steps,
+				}
+				jsonResult, _ := json.Marshal(result)
+				c.Data(200, "application/json", jsonResult)
+				return
+			}
+		} else{
+			if method == "bfs" {
+				// Buat worker pool untuk BFS multiple paths
+
+				bfsJobs, bfsResults := StartBFSMultipleWorkerPool(numWorkers)
+				// Submit jobs
+				go func() {
+				bfsJobs <- BFSMultipleJob{
+					Target:   target,
+					MaxPaths: maxPathsPerTarget,
+					JobID:    1,
+				}
+					close(bfsJobs)
+				}()
+				resultsJSON := make([]map[string][]string, 0)
+				for result := range bfsResults {
+					if result.Found {
+						for i, path := range result.Paths {
+							pathJSON := make(map[string][]string)
+							pathJSON[fmt.Sprintf("Path %d", i+1)] = path
+							resultsJSON = append(resultsJSON, pathJSON)
+						}
+					}
+				}
+				jsonResult, _ := json.Marshal(resultsJSON)
+				c.Data(200, "application/json", jsonResult)
+				return
+			} else if (method == "dfs") {
+				dfsJobs, dfsResults := StartDFSMultipleWorkerPool(numWorkers)
+				go func() {
+					dfsJobs <- DFSMultipleJob{
+						Target:   target,
+						MaxPaths: maxPathsPerTarget,
+						JobID:    3,
+					}
+					close(dfsJobs)
+				}()
+				resultsJSON := make([]map[string][]string, 0)
+				for result := range dfsResults {
+					if result.Found {
+						for i, path := range result.Paths {
+							pathJSON := make(map[string][]string)
+							pathJSON[fmt.Sprintf("Path %d", i+1)] = path
+							resultsJSON = append(resultsJSON, pathJSON)
+						}
+					}
+				}
+				jsonResult, _ := json.Marshal(resultsJSON)
+				c.Data(200, "application/json", jsonResult)
+				return
+			}
+		}
+	})	
+	r.Run(":8080")
 }

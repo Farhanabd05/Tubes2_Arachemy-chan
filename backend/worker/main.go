@@ -45,7 +45,7 @@ func main() {
 							err = fmt.Errorf("panic: %v", r)
 						}
 					}()
-					steps, found = bfsSinglePath(job.Target)
+					// steps, found = bfsSinglePath(job.Target)
 				default:
 					err = fmt.Errorf("unsupported  job type: %s", job.JobType)
 				}

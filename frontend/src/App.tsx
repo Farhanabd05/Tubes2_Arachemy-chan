@@ -1,10 +1,18 @@
 import { useState } from 'react';
 import './App.css';
 
+interface SingleResult {
+  found: boolean;
+  steps: string[];
+}
+
+type PathObject = {[key: string] : string[]};
+type MultipleResult = PathObject[];
+
 function App() {
   const [target, setTarget] = useState('');
-  const [result, setResult] = useState<string[] | null>(null);
-  const [found, setFound] = useState<boolean | null>(null);
+  const [result, setResult] = useState<SingleResult | MultipleResult | null>(null);
+  const [isMultiple, setIsMultiple] = useState(false);
   const [loading, setLoading] = useState(false);
   const [method, setMethod] = useState('');
   const [numberRecipe, setNumberRecipe] = useState('');
@@ -13,18 +21,35 @@ function App() {
 
     setLoading(true);
     setResult(null);
-    setFound(null);
+    setIsMultiple(false);
 
     try {
       const res = await fetch(`http://localhost:8080/find?target=${target}&method=${method}&numberRecipe=${numberRecipe}`);
       const data = await res.json();
-      setResult(data.steps);
-      setFound(data.found);
+
+      if (Array.isArray(data)) {
+        setResult(data);
+        setIsMultiple(true);
+      }else{
+        setResult(data);
+        setIsMultiple(false);
+      }
     } catch (error) {
       console.error('❌ Error:', error);
-      setFound(false);
+      setResult({ found: false, steps: [] });
+      setIsMultiple(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const isFound = () => {
+    if (!result) return false;
+    
+    if (isMultiple) {
+      return (result as MultipleResult).length > 0;
+    } else {
+      return (result as SingleResult).found;
     }
   };
 
@@ -48,15 +73,38 @@ function App() {
       />
       <button onClick={findCombination}>Cari</button>
       {loading && <p>⏳ Mencari...</p>}
-      {found === false && <p>❌ Tidak ditemukan</p>}
-      {found && result && (
+      {!loading && result && !isFound() && <p>❌ Tidak Ditemukan</p>}
+      {!loading && result && isFound() && (
         <div>
           <h2>✅ Ditemukan!</h2>
-          <ol>
-            {result.map((step, i) => (
-              <li key={i}>🧪 {step}</li>
-            ))}
-          </ol>
+          {!isMultiple && (
+            <ul>
+              {(result as SingleResult).steps.map((step, i) => (
+                <li key={i}>{i}. 🧪 {step}</li>
+              ))}
+            </ul>
+          )}
+
+          {isMultiple && (
+            <div>
+              {(result as MultipleResult).map((pathObj, i) => {
+                const pathName = Object.keys(pathObj)[0];
+
+                const steps = pathObj[pathName];
+
+                return (
+                  <div key={i}>
+                    <h3>{pathName}</h3>
+                    <ul>
+                      {steps.map((steps, j) => (
+                        <li key={j}>{j}. 🧪 {steps}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

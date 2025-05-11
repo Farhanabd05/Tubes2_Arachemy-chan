@@ -26,6 +26,11 @@ type Job struct {
 	Target  string
 }
 
+type Result struct {
+	Found bool     `json:"found"`
+	Steps []string `json:"steps"`
+}
+
 // JobResult contains the result of a processed job
 type JobResult struct {
 	JobID    int
