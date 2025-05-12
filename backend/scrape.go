@@ -67,11 +67,11 @@ func ScrapeHandler(ctx *gin.Context) {
 	var recipes []RecipeType
 
 	c := colly.NewCollector(colly.AllowedDomains("little-alchemy.fandom.com"),
-	// Add timeout settings to avoid long wait times
-	colly.MaxDepth(1),
-	colly.Async(true),
-)
-		// Limit concurrent requests
+		// Add timeout settings to avoid long wait times
+		colly.MaxDepth(1),
+		colly.Async(true),
+	)
+	// Limit concurrent requests
 	_ = c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
 		Parallelism: 2,
@@ -102,7 +102,40 @@ func ScrapeHandler(ctx *gin.Context) {
 				ingredient1 := strings.TrimSpace(aTags.Eq(1).Text())
 				ingredient2 := strings.TrimSpace(aTags.Eq(3).Text())
 
-				if ingredient1 == "Time" || ingredient2 == "Time" || ingredient1 == "Ruins" || ingredient2 == "Ruins" || ingredient1 == "Archeologist" || ingredient2 == "Archeologist" {
+				var ignoredIngredients = map[string]bool{
+					"Time":             true,
+					"Ruins":            true,
+					"Archeologist":     true,
+					"Zeus":             true,
+					"Angel":            true,
+					"Jiangshi":         true,
+					"Monster":          true,
+					"Baba yaga":        true,
+					"Book of the dead": true,
+					"Cockatrice":       true,
+					"Curse":            true,
+					"Deity":            true,
+					"Demon":            true,
+					"Heaven":           true,
+					"Holy grail":       true,
+					"Holy water":       true,
+					"Necromancer":      true,
+					"Paladin":          true,
+					"Selkie":           true,
+					"Troll":            true,
+					"Babe the blue ox": true,
+					"Cosmic egg":       true,
+					"Cupid":            true,
+					"Cyclops":          true,
+					"Dionysus":         true,
+					"Faerie":           true,
+					"Paul bunyan":      true,
+					"Elf":              true,
+					"Maui's fishhook":  true,
+				}
+
+				// Then in your function, replace the long if condition with:
+				if ignoredIngredients[ingredient1] || ignoredIngredients[ingredient2] {
 					return
 				}
 
@@ -123,17 +156,17 @@ func ScrapeHandler(ctx *gin.Context) {
 
 	c.OnError(func(r *colly.Response, e error) {
 		fmt.Println("Error:", e.Error())
-				// Check for specific network/TCP errors
-		if strings.Contains(e.Error(), "dial tcp") || 
-		   strings.Contains(e.Error(), "context deadline exceeded") ||
-		   strings.Contains(e.Error(), "i/o timeout") {
-			
+		// Check for specific network/TCP errors
+		if strings.Contains(e.Error(), "dial tcp") ||
+			strings.Contains(e.Error(), "context deadline exceeded") ||
+			strings.Contains(e.Error(), "i/o timeout") {
+
 			// Log specific TCP error message
 			fmt.Printf("TCP connection failed: %s. Retrying...\n", e.Error())
-			
+
 			// You could implement retry logic here
 			// For example, try an alternative domain or proxy
-			
+
 			// Optional: Retry with a different transport
 			transport := &http.Transport{
 				Dial: (&net.Dialer{
@@ -144,9 +177,9 @@ func ScrapeHandler(ctx *gin.Context) {
 				ResponseHeaderTimeout: 15 * time.Second,
 				ExpectContinueTimeout: 1 * time.Second,
 			}
-			
+
 			c.WithTransport(transport)
-			
+
 			// Optional: Try with a backup URL if available
 			// c.Visit(backupUrl)
 		}
@@ -154,11 +187,11 @@ func ScrapeHandler(ctx *gin.Context) {
 
 	err := c.Visit(url)
 	if err != nil {
-		if strings.Contains(err.Error(), "dial tcp") || 
-		   strings.Contains(err.Error(), "context deadline exceeded") ||
-		   strings.Contains(err.Error(), "i/o timeout") {
+		if strings.Contains(err.Error(), "dial tcp") ||
+			strings.Contains(err.Error(), "context deadline exceeded") ||
+			strings.Contains(err.Error(), "i/o timeout") {
 			ctx.JSON(http.StatusServiceUnavailable, gin.H{
-				"error": "Network connection failed. Please check your internet connection and try again later.",
+				"error":   "Network connection failed. Please check your internet connection and try again later.",
 				"details": err.Error(),
 			})
 		} else {
