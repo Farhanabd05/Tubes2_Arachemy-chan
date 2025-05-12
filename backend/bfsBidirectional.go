@@ -60,7 +60,6 @@ func bfsBidirectionalPath(target string) ([]string, bool, time.Duration, int) {
 						step := fmt.Sprintf("%s + %s = %s", ingr1, ingr2, result)
 						path = append(path, step)
 						newForward[result] = NodeInfo{Path: path}
-						fmt.Printf("[DEBUG] Forward: %s -> %s\n", strings.Join(forward[ingr1].Path, " -> "), step)
 						break
 					}
 				}
@@ -68,14 +67,13 @@ func bfsBidirectionalPath(target string) ([]string, bool, time.Duration, int) {
 		}
 
 		// Expand backward frontier
-		for elem := range backward {
+		for elem, _ := range backward {
 			for _, ingr := range recipesMap[elem] {
 				for _, component := range ingr {
 					if _, exists := backward[component]; !exists {
 						step := fmt.Sprintf("%s + %s = %s", ingr[0], ingr[1], elem)
 						path := append([]string{step}, backward[elem].Path...)
 						newBackward[component] = NodeInfo{Path: path}
-						fmt.Printf("[DEBUG] Backward: %s <- %s\n", step, strings.Join(backward[elem].Path, " <- "))
 					}
 				}
 			}
@@ -85,7 +83,6 @@ func bfsBidirectionalPath(target string) ([]string, bool, time.Duration, int) {
 			forward[k] = v
 			nodesVisited++
 			if _, ok := backward[k]; ok {
-				fmt.Printf("[DEBUG] Meeting point at %s (discovered by forward)\n", k)
 				meetingPoint = k
 				goto reconstruct
 			}
@@ -94,7 +91,6 @@ func bfsBidirectionalPath(target string) ([]string, bool, time.Duration, int) {
 			backward[k] = v
 			nodesVisited++
 			if _, ok := forward[k]; ok {
-				fmt.Printf("[DEBUG] Meeting point at %s (discovered by backward)\n", k)
 				meetingPoint = k
 				goto reconstruct
 			}
