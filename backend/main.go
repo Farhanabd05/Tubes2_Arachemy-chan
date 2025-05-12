@@ -64,27 +64,53 @@ func main() {
 		numWorkers := runtime.NumCPU() 
 		if numberRecipeInt == 1 {
 			if method == "bfs" {
-				steps, ok, runtimes, nodes := bfsSinglePath(strings.ToLower(target))
-				result := Result{
-					Found: ok,
-					Steps: steps,
-					Runtime: runtimes,
-					NodesVisited: nodes,
+				if bidirectional := c.Query("bidirectional"); bidirectional == "true" {
+    				steps, ok, runtime, nodesVisited := bfsBidirectionalPath(strings.ToLower(target))
+					result := Result{
+						Found: ok,
+						Steps: steps,
+						Runtime: runtime,
+						NodesVisited: nodesVisited,
+					}
+					jsonResult, _ := json.Marshal(result)
+					c.Data(200, "application/json", jsonResult)
+					return
+				}else {
+					steps, ok, runtimes, nodes := bfsSinglePath(strings.ToLower(target))
+					result := Result{
+						Found: ok,
+						Steps: steps,
+						Runtime: runtimes,
+						NodesVisited: nodes,
+					}
+					jsonResult, _ := json.Marshal(result)
+					c.Data(200, "application/json", jsonResult)
+					return
 				}
-				jsonResult, _ := json.Marshal(result)
-				c.Data(200, "application/json", jsonResult)
-				return
 			} else if (method == "dfs") {
-				steps, ok, runtime, nodesVisited := DFSWrapper(strings.ToLower(target))
-				result := Result{
-					Found: ok,
-					Steps: steps,
-					Runtime: runtime,
-					NodesVisited: nodesVisited,
+				if bidirectional := c.Query("bidirectional"); bidirectional == "true" {
+					steps, ok, runtime, nodesVisited := dfsBidirectionalPath(strings.ToLower(target))
+					result := Result{
+						Found: ok,
+						Steps: steps,
+						Runtime: runtime,
+						NodesVisited: nodesVisited,
+					}
+					jsonResult, _ := json.Marshal(result)
+					c.Data(200, "application/json", jsonResult)
+					return
+				} else {
+					steps, ok, runtime, nodesVisited := DFSWrapper(strings.ToLower(target))
+					result := Result{
+						Found: ok,
+						Steps: steps,
+						Runtime: runtime,
+						NodesVisited: nodesVisited,
+					}
+					jsonResult, _ := json.Marshal(result)
+					c.Data(200, "application/json", jsonResult)
+					return
 				}
-				jsonResult, _ := json.Marshal(result)
-				c.Data(200, "application/json", jsonResult)
-				return
 			}
 		} else{
 			if method == "bfs" {
