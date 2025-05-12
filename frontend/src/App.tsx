@@ -1,5 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import './App.css';
+
+// Define types for the recipe data
+interface Recipe {
+  Element: string;
+  Ingredient1: string;
+  Ingredient2: string;
+  Type: number;
+}
+
+interface ScrapeResponse {
+  data: Recipe[];
+}
 
 interface SingleResult {
   found: boolean;
@@ -11,6 +24,9 @@ type PathObject = { [key: string]: string[] };
 type MultipleResult = PathObject[];
 
 function App() {
+  // State for scraping status
+  const [scrapingStatus, setScrapingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [target, setTarget] = useState('');
   const [result, setResult] = useState<SingleResult | MultipleResult | null>(null);
   const [isMultiple, setIsMultiple] = useState(false);
@@ -58,9 +74,41 @@ function App() {
     }
   };
 
+  
+  // Function to scrape data when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setScrapingStatus('loading');
+        console.log('Scraping data from API...');
+        
+        const response = await axios.get<ScrapeResponse>('http://localhost:8080/scrape');
+        setRecipes(response.data.data);
+        setScrapingStatus('success');
+        console.log(`Successfully scraped ${response.data.data.length} recipes`);
+      } catch (error) {
+        console.error('Error during scraping:', error);
+        setScrapingStatus('error');
+      }
+    };
+
+    fetchData();
+  }, []); // Empty dependency array means this runs once on mount
+
   return (
     <div className="App">
-      <h1>🔍 Cari Kombinasi Elemen</h1>
+      <header>
+        <h1>Little Alchemy 2 Path Finder</h1>
+      </header>
+      
+      {/* Scraping status indicator */}
+      {scrapingStatus === 'loading' && <p>⏳ Mengambil data resep...</p>}
+      {scrapingStatus === 'error' && 
+        <p>❌ Error mengambil data. Silakan refresh halaman untuk mencoba lagi.</p>
+      }
+      {scrapingStatus === 'success' && 
+        <p>✅ Berhasil mengambil {recipes.length} resep!</p>
+      }
       <input
         value={target}
         onChange={(e) => setTarget(e.target.value)}
@@ -76,7 +124,7 @@ function App() {
         onChange={(e) => setNumberRecipe(e.target.value)}
         placeholder="Contoh: 3"
       />
-      <button onClick={findCombination}>Cari</button>
+      <button onClick={findCombination} disabled={loading || !target || scrapingStatus !== 'success'}>Cari</button>
       {loading && <p>⏳ Mencari...</p>}
       {!loading && result && !isFound() && <p>❌ Tidak Ditemukan</p>}
       {!loading && result && isFound() && (

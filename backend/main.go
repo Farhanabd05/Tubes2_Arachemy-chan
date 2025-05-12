@@ -24,6 +24,7 @@ func main() {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
+	r.GET("/scrape", ScrapeHandler)	
 	r.GET("/find", func(c *gin.Context) {
 		target := c.Query("target")
 		if target == "" {
@@ -47,7 +48,7 @@ func main() {
 			return
 		}
 
-		recipes, err := loadRecipes("test/data/recipes.json")
+		recipes, err := loadRecipes("data/recipes.json")
 		if err != nil {
 			c.JSON(500, gin.H{"error": "Error loading recipes: " + err.Error()})
 			return
