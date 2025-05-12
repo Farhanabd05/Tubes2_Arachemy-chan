@@ -16,8 +16,6 @@ import (
 
 type RecipeType struct {
 	Element     string
-	ImgUrl1     string
-	ImgUrl2     string
 	Ingredient1 string
 	Ingredient2 string
 	Type        int
@@ -102,8 +100,6 @@ func ScrapeHandler(ctx *gin.Context) {
 					return
 				}
 
-				imgUrl1, _ := aTags.Eq(0).Find("img").Attr("data-src")
-				imgUrl2, _ := aTags.Eq(2).Find("img").Attr("data-src")
 				ingredient1 := strings.TrimSpace(aTags.Eq(1).Text())
 				ingredient2 := strings.TrimSpace(aTags.Eq(3).Text())
 
@@ -113,8 +109,6 @@ func ScrapeHandler(ctx *gin.Context) {
 
 				r := RecipeType{
 					Element:     strings.ToLower(element),
-					ImgUrl1:     imgUrl1,
-					ImgUrl2:     imgUrl2,
 					Ingredient1: strings.ToLower(ingredient1),
 					Ingredient2: strings.ToLower(ingredient2),
 					Type:        elementType,
