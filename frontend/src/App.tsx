@@ -58,21 +58,6 @@ function App() {
     }
   };
 
-  
-  // Helper function to check if all paths have the same metric value
-    const checkAllSameMetric = (results: MultipleResult, metricKey: string): boolean => {
-    if (results.length === 0) return false;
-    const firstValue = results[0][metricKey]?.[0];
-    if (!firstValue) return false;
-    return results.every(item => item[metricKey]?.[0] === firstValue);
-  };
-
-    // Helper function to get common metric value
-  const getCommonMetric = (results: MultipleResult, metricKey: string): string | null => {
-    if (results.length === 0) return null;
-    return results[0][metricKey]?.[0] || null;
-  };
-
   return (
     <div className="App">
       <h1>🔍 Cari Kombinasi Elemen</h1>
@@ -143,7 +128,7 @@ function App() {
               <strong>Runtime:</strong> {runtime} ns
             </div>
           )}
-          {nodesVisited !== null && (
+          {nodesVisited !== null && (!isMultiple) && (
             <div>
               <strong>Nodes Visited:</strong> {nodesVisited}
             </div>
