@@ -1,0 +1,12 @@
+# Config file for Air
+
+[build]
+  bin = "main"
+  cmd = "go build -o main ."
+  include_ext = ["go"]
+  exclude_dir = ["vendor", "data"]
+  exclude_file = []
+  follow_symlink = true
+
+[run]
+  cmd = "./main"

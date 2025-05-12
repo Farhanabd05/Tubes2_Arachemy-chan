@@ -1,10 +1,12 @@
-// vite.config.ts
 import { defineConfig } from 'vite';
+import dns from 'node:dns';
+
+dns.setDefaultResultOrder('verbatim');
 
 export default defineConfig({
   server: {
-    proxy: {
-      '/search': 'http://localhost:8080',
-    }
-  }
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+  },
 });

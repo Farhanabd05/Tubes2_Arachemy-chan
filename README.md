@@ -33,6 +33,7 @@ A web application that implements BFS and DFS algorithms to find crafting paths 
 - Go 1.22+
 - Node.js 18+
 - npm 9+
+- Docker v2 (optional)
 
 ### Setup Instructions
 
@@ -42,35 +43,75 @@ A web application that implements BFS and DFS algorithms to find crafting paths 
    cd Tubes2_Arachemy-chan
    ```
 
-2. **Install Dependencies**
+2. **Choose Your Setup Method**
 
-   **Frontend:**
+   ### Option A: Using Docker
+
+   **If you need to install Docker first (Linux/Ubuntu):**
+   ```bash
+   # Update package list and install dependencies
+   sudo apt-get update
+   sudo apt-get install ca-certificates curl gnupg
+
+   # Add Docker''s official GPG key
+   sudo install -m 0755 -d /etc/apt/keyrings
+   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+   sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+   # Add Docker repository to APT sources
+   echo \
+     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+     $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+   # Update package list again
+   sudo apt-get update
+
+   # Install Docker Compose Plugin
+   sudo apt-get install docker-compose-plugin
+
+   # Verify installation
+   sudo docker compose version
+   ```
+
+   **Running with Docker:**
+   ```bash
+   # Stop any running containers
+   sudo docker compose down
+   
+   # Build and start the application
+   sudo docker compose up --build
+   ```
+
+   ### Option B: Manual Setup
+
+   **Frontend Setup:**
    ```bash
    cd frontend
    npm install
    ```
 
-   **Backend:**
+   **Backend Setup:**
    ```bash
    cd backend
    go mod tidy
    ```
 
-3. **Environment Setup**
+3. **Environment Setup (For Manual Installation)**
 
-   *For Windows Users:*
+   **For Windows Users:**
    ```bash
    wsl --install
    wsl --set-default-version 2
    ```
 
-   *Install Development Tools:*
+   **Install Development Tools:**
    ```bash
    sudo apt update && sudo apt upgrade -y
    sudo apt install curl snapd -y
    ```
 
-4. **Install Node.js (using nvm)**
+   **Install Node.js (using nvm):**
    ```bash
    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
    source ~/.bashrc
@@ -78,18 +119,25 @@ A web application that implements BFS and DFS algorithms to find crafting paths 
    nvm use --lts
    ```
 
-5. **Install Go**
+   **Install Go:**
    ```bash
    sudo snap install go --classic
    ```
 
+
+
 ## 🚀 Running the Application
+
+### Using Docker
+The application will automatically start after running `sudo docker compose up --build`.
+if you already build, just use this command: `sudo docker compose up`
+### Manual Start
 
 **Start Backend:**
 ```bash
 cd backend
 go build -o main
-go run main
+./main  # or just: go run main
 ```
 
 **Start Frontend:**
@@ -101,6 +149,8 @@ npm run dev
 The application will be available at:
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:8080`
+Note: if you use wsl, to run docker, you must click link http://localhost:5173 in:
+frontend-1  |  INFO  Accepting connections at http://localhost:5173
 
 ## 🖥️ Usage
 
@@ -125,19 +175,19 @@ func dfsSinglePath(element string, visited map[string]bool, trace []string, node
 }
 ```
 
-## 📂 Project Structure (Just Show Important Code)
+## 📂 Project Structure
 
 ```
 ├── backend
 │   ├── main.go          # API server entrypoint
 │   ├── bfsMultiple.go   # Parallel BFS implementation
-│   ├── bfsSingle.go   # Single BFS implementation
+│   ├── bfsSingle.go     # Single BFS implementation
 │   ├── dfsMultiple.go   # Parallel DFS implementation
-│   ├── dfsSingle.go   # Single DFS implementation
-│   ├── scrape.go   # Scrape implementation
-│   └── utils.go         # Data loading utilities
+│   ├── dfsSingle.go     # Single DFS implementation
+│   ├── scrape.go        # Scrape implementation
+│   ├── utils.go         # Data loading utilities
 │   └── data
-│       └── recipes.json     # Element combinations database
+│       └── recipes.json # Element combinations database
 └── frontend
     ├── src
     │   ├── components   # React components
