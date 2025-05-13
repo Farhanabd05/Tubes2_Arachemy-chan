@@ -70,3 +70,37 @@ ol {
   justify-content: center;
   align-items: center;
 }
+
+.search-form {
+  display: flex;
+  flex-direction: row; 
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.search-form input,
+.search-form button,
+.search-form .react-select-container {
+  font-family: inherit;
+  font-size: 1rem;
+  width: auto;
+  min-width: 120px;
+  box-sizing: border-box;
+}
+
+.react-select-container {
+  min-width: 100%;
+}
+
+.react-select__control {
+  background-color: #2b2b2b;
+  color: white;
+  border: 1px solid #ccc;
+}
+
+.react-select__menu {
+  background-color: #2b2b2b;
+  color: white;
+}
