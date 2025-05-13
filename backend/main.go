@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
+	"sync"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -63,7 +63,6 @@ func main() {
 			c.JSON(400, gin.H{"error": "Invalid numberRecipe value"})
 			return
 		}
-		numWorkers := runtime.NumCPU()
 		if numberRecipeInt == 1 {
 			if method == "bfs" {
 				if bidirectional := c.Query("bidirectional"); bidirectional == "true" {
@@ -135,32 +134,49 @@ func main() {
 				c.Data(200, "application/json", jsonResult)
 				return
 			} else if method == "dfs" {
-				dfsJobs, dfsResults := StartDFSMultipleWorkerPool(numWorkers)
+				jobs := make(chan Job)
+				results := make(chan JobResultDFS)
+				var wg sync.WaitGroup
+				maxResults = numberRecipeInt
+
+				numWorkers := runtime.NumCPU()
+				for i := 0; i < numWorkers; i++ {
+					wg.Add(1)
+					go worker(i, jobs, results, &wg)
+				}
+
 				go func() {
-					dfsJobs <- DFSMultipleJob{
-						Target:   target,
-						MaxPaths: maxPathsPerTarget,
-						JobID:    3,
+					for i := range recipesMap[target] {
+						jobs <- Job{JobID: i + 1, JobType: "dfs", Target: target}
 					}
-					close(dfsJobs)
+					close(jobs)
 				}()
-				resultsJSON := make([]map[string][]string, 0)
-				for result := range dfsResults {
-					if result.Found {
-						var totalRuntime time.Duration = result.Runtime
-						var totalNodes int = result.NodesVisited
-						for i, path := range result.Paths {
-							pathJSON := make(map[string][]string)
-							pathJSON[fmt.Sprintf("Path %d", i+1)] = path
-							resultsJSON = append(resultsJSON, pathJSON)
-							resultsJSON[i]["Runtime"] = []string{totalRuntime.String()}
-							resultsJSON[i]["NodesVisited"] = []string{strconv.Itoa(totalNodes)}
+
+				go func() {
+					wg.Wait()
+					close(results)
+				}()
+
+				printed := 0
+				seenPaths := make(map[string]bool)
+				var resultsJSON []map[string][]string // Ubah dari []Result ke []map[string][]string
+				for res := range results {
+					key := strings.Join(res.Steps, "|")
+					if !seenPaths[key] {
+						seenPaths[key] = true
+						pathJSON := make(map[string][]string)
+						pathJSON[fmt.Sprintf("Path %d", printed+1)] = res.Steps
+						pathJSON["Runtime"] = []string{res.Duration.String()}
+						pathJSON["NodesVisited"] = []string{strconv.Itoa(len(res.Steps))}
+						resultsJSON = append(resultsJSON, pathJSON)
+						printed++
+						if printed >= maxResults {
+							break
 						}
 					}
 				}
 				jsonResult, _ := json.Marshal(resultsJSON)
 				c.Data(200, "application/json", jsonResult)
-				return
 			}
 		}
 	})

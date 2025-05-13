@@ -7,151 +7,138 @@ import (
 	"time"
 )
 
-// DFSMultipleJob merepresentasikan tugas pencarian multiple path DFS
-type DFSMultipleJob struct {
-    Target   string
-    MaxPaths int
-    JobID    int
+
+type ResultDFS struct {
+	Found        bool          `json:"found"`
+	Steps        []string      `json:"steps"`
+	Runtime      time.Duration `json:"runtime"`
+	NodesVisited int           `json:"nodesVisited"`
 }
 
-// DFSMultipleResult berisi hasil pencarian multiple path DFS
-type DFSMultipleResult struct {
-    Target   string
-    Paths    [][]string
-    Found    bool
-    JobID    int
-    Runtime time.Duration
-    NodesVisited int
+type JobResultDFS struct {
+	JobID    int
+	WorkerID int
+	JobType  string
+	Target   string
+	Found    bool
+	Steps    []string
+	Err      error
+	Duration time.Duration
 }
 
-// StartDFSMultipleWorkerPool memulai worker pool untuk pencarian multiple path DFS
-func StartDFSMultipleWorkerPool(numWorkers int) (chan<- DFSMultipleJob, <-chan DFSMultipleResult) {
-    jobs := make(chan DFSMultipleJob, numWorkers*2)
-    results := make(chan DFSMultipleResult, numWorkers*2)
-    var wg sync.WaitGroup
-    
-    // Mulai workers
-    for i := 0; i < numWorkers; i++ {
-        wg.Add(1)
-        go dfsMultiplePathsWorker(i, jobs, results, &wg)
-    }
-    
-    // Tutup channel results ketika semua worker selesai
-    go func() {
-        wg.Wait()
-        close(results)
-    }()
-    
-    return jobs, results
+// Globals
+var (
+	maxResults  = 3
+	maxDepth    = 19
+	resultMutex sync.Mutex
+)
+
+
+
+// Utility to copy map
+func mapCopy(src map[string]bool) map[string]bool {
+	dst := make(map[string]bool)
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
 
-func dfsMulPath(element string, visited map[string]bool, trace []string, maxPaths int, pathCollection *[][]string, nodesVisited *int) bool {
-    (*nodesVisited)++ // Increment node count for each node we process
+// DFS recursive with constraint
+func dfsCombinatorial(target string, visited map[string]bool, path []string, depth int) []ResultDFS {
+	if depth > maxDepth {
+		return nil
+	}
 
-    if baseElements[element] {
-        // Untuk elemen dasar, tambahkan path kosong
-        *pathCollection = append(*pathCollection, []string{})
-        return true
-    }
+	if baseElements[target] {
+		return []ResultDFS{{
+			Found:        true,
+			Steps:        []string{},
+			NodesVisited: 1,
+			Runtime:      0,
+		}}
+	}
 
-    if visited[element] {
-        return false
-    }
+	if visited[target] {
+		return nil
+	}
 
-    visited[element] = true
-    recipes, ok := recipesMap[element]
-    if !ok {
-        return false
-    }
+	visited[target] = true
+	defer delete(visited, target)
 
-    foundAnyPath := false
-    elementTier := tierMap[element]
-    
-    // Cek setiap resep yang mungkin
-    for _, ingr := range recipes {
-        // Skip jika tier bahan >= tier elemen
-        ingrTier1 := tierMap[ingr[0]]
-        ingrTier2 := tierMap[ingr[1]]
-        if ingrTier1 >= elementTier || ingrTier2 >= elementTier {
-            continue
-        }
-        
-        // Kumpulkan path untuk ingredient pertama
-        leftPaths := [][]string{}
-        newVisited1 := copyMap(visited)
-        if dfsMulPath(ingr[0], newVisited1, append(trace, element), maxPaths, &leftPaths, nodesVisited) {
-            // Kumpulkan path untuk ingredient kedua
-            rightPaths := [][]string{}
-            newVisited2 := copyMap(visited)
-            if dfsMulPath(ingr[1], newVisited2, append(trace, element), maxPaths, &rightPaths, nodesVisited) {
-                // Kombinasikan path dari kedua ingredient
-                for _, left := range leftPaths {
-                    for _, right := range rightPaths {
-                        if len(*pathCollection) >= maxPaths {
-                            break
-                        }
-                        combined := append(append([]string{}, left...), right...)
-                        combined = append(combined, fmt.Sprintf("%s + %s = %s", ingr[0], ingr[1], element))
-                        *pathCollection = append(*pathCollection, combined)
-                        foundAnyPath = true
-                    }
-                    if len(*pathCollection) >= maxPaths {
-                        break
-                    }
-                }
-            }
-        }
-        
-        if len(*pathCollection) >= maxPaths {
-            break
-        }
-    }
-    
-    return foundAnyPath
+	startTime := time.Now()
+	elementTier := tierMap[target]
+	var results []ResultDFS
+	uniquePaths := make(map[string]bool)
+
+	mutex.RLock()
+	recipes, ok := recipesMap[target]
+	mutex.RUnlock()
+	if !ok {
+		return nil
+	}
+
+	for _, ingr := range recipes {
+		i1, i2 := ingr[0], ingr[1]
+		t1, t2 := tierMap[i1], tierMap[i2]
+
+		if t1 >= elementTier || t2 >= elementTier {
+			continue
+		}
+
+		visited1 := mapCopy(visited)
+		visited2 := mapCopy(visited)
+
+		left := dfsCombinatorial(i1, visited1, path, depth+1)
+		right := dfsCombinatorial(i2, visited2, path, depth+1)
+
+		for _, l := range left {
+			for _, r := range right {
+				steps := append(append([]string{}, l.Steps...), r.Steps...)
+				step := fmt.Sprintf("%s + %s = %s", i1, i2, target)
+				steps = append(steps, step)
+				if printCount < maxPrints {
+					printCount++
+					// fmt.Printf("[DEBUG] Processing: %s + %s => %s (Depth: %d)\n", i1, i2, target, depth)
+				}
+
+				key := strings.Join(steps, "|")
+				if !uniquePaths[key] {
+					results = append(results, ResultDFS{
+						Found:        true,
+						Steps:        steps,
+						NodesVisited: l.NodesVisited + r.NodesVisited + 1,
+						Runtime:      time.Since(startTime),
+					})
+					uniquePaths[key] = true
+					if len(results) >= maxResults {
+						return results
+					}
+				}
+			}
+		}
+	}
+
+	return results
 }
 
+// Worker goroutine
+func worker(id int, jobs <-chan Job, results chan<- JobResultDFS, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for job := range jobs {
+		allResults := dfsCombinatorial(job.Target, make(map[string]bool), []string{}, 0)
 
-// dfsMultiplePathsTopLevel mencari multiple path menggunakan DFS terparalel di level atas
-func dfsMultiplePathsTopLevel(target string, maxPaths int) ([][]string, bool, int) {
-    target = strings.ToLower(target)
-    nodesVisited := 0 // Initialize node count
-    // Cek apakah target adalah elemen dasar
-    if baseElements[target] {
-        return [][]string{{}}, true, 1
-    }
-    
-    // Kumpulkan semua path
-    visited := make(map[string]bool)
-    allPaths := [][]string{}
-    
-    // Panggil fungsi dfsSinglePath yang telah dimodifikasi
-    success := dfsMulPath(target, visited, []string{}, maxPaths, &allPaths, &nodesVisited)
-    
-    return allPaths, success && len(allPaths) > 0, nodesVisited
+		for _, r := range allResults {
+			results <- JobResultDFS{
+				JobID:    job.JobID,
+				WorkerID: id,
+				JobType:  job.JobType,
+				Target:   job.Target,
+				Found:    r.Found,
+				Steps:    r.Steps,
+				Duration: r.Runtime,
+			}
+		}
+	}
 }
 
-
-// dfsMultiplePathsWorker memproses job untuk mencari multiple path menggunakan DFS
-func dfsMultiplePathsWorker(id int, jobs <-chan DFSMultipleJob, results chan<- DFSMultipleResult, wg *sync.WaitGroup) {
-    defer wg.Done()
-    fmt.Printf("[Worker %d] Started for DFS multiple paths\n", id)
-    
-    for job := range jobs {
-        startTime := time.Now()
-        fmt.Printf("[Worker %d] Processing job %d: Finding paths to %s (max: %d)\n", 
-                  id, job.JobID, job.Target, job.MaxPaths)
-        
-        // Cari multiple path menggunakan DFS terparalel di level atas
-        paths, found, nodesVisited := dfsMultiplePathsTopLevel(job.Target, job.MaxPaths)
-        
-        duration := time.Since(startTime)
-        results <- DFSMultipleResult{
-            Target:   job.Target,
-            Paths:    paths,
-            Found:    found,
-            JobID:    job.JobID,
-            Runtime: duration,
-            NodesVisited: nodesVisited,
-        }
-    }
-}
