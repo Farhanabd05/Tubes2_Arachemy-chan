@@ -7,6 +7,8 @@ import (
 	// "time"
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -24,7 +26,7 @@ func main() {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
-	r.GET("/scrape", ScrapeHandler)	
+	r.GET("/scrape", ScrapeHandler)
 	r.GET("/find", func(c *gin.Context) {
 		target := c.Query("target")
 		if target == "" {
@@ -56,44 +58,44 @@ func main() {
 		buildRecipeMap(recipes)
 
 		numberRecipeInt, err := strconv.Atoi(numberRecipe)
-		var  maxPathsPerTarget = numberRecipeInt
+		var maxPathsPerTarget = numberRecipeInt
 		if err != nil {
 			c.JSON(400, gin.H{"error": "Invalid numberRecipe value"})
 			return
 		}
-		numWorkers := runtime.NumCPU() 
+		numWorkers := runtime.NumCPU()
 		if numberRecipeInt == 1 {
 			if method == "bfs" {
 				if bidirectional := c.Query("bidirectional"); bidirectional == "true" {
-    				steps, ok, runtime, nodesVisited := bfsBidirectionalPath(strings.ToLower(target))
+					steps, ok, runtime, nodesVisited := bfsBidirectionalPath(strings.ToLower(target))
 					result := Result{
-						Found: ok,
-						Steps: steps,
-						Runtime: runtime,
+						Found:        ok,
+						Steps:        steps,
+						Runtime:      runtime,
 						NodesVisited: nodesVisited,
 					}
 					jsonResult, _ := json.Marshal(result)
 					c.Data(200, "application/json", jsonResult)
 					return
-				}else {
+				} else {
 					steps, ok, runtimes, nodes := bfsSinglePath(strings.ToLower(target))
 					result := Result{
-						Found: ok,
-						Steps: steps,
-						Runtime: runtimes,
+						Found:        ok,
+						Steps:        steps,
+						Runtime:      runtimes,
 						NodesVisited: nodes,
 					}
 					jsonResult, _ := json.Marshal(result)
 					c.Data(200, "application/json", jsonResult)
 					return
 				}
-			} else if (method == "dfs") {
+			} else if method == "dfs" {
 				if bidirectional := c.Query("bidirectional"); bidirectional == "true" {
 					steps, ok, runtime, nodesVisited := dfsBidirectionalPath(strings.ToLower(target))
 					result := Result{
-						Found: ok,
-						Steps: steps,
-						Runtime: runtime,
+						Found:        ok,
+						Steps:        steps,
+						Runtime:      runtime,
 						NodesVisited: nodesVisited,
 					}
 					jsonResult, _ := json.Marshal(result)
@@ -102,9 +104,9 @@ func main() {
 				} else {
 					steps, ok, runtime, nodesVisited := DFSWrapper(strings.ToLower(target))
 					result := Result{
-						Found: ok,
-						Steps: steps,
-						Runtime: runtime,
+						Found:        ok,
+						Steps:        steps,
+						Runtime:      runtime,
 						NodesVisited: nodesVisited,
 					}
 					jsonResult, _ := json.Marshal(result)
@@ -112,21 +114,21 @@ func main() {
 					return
 				}
 			}
-		} else{
+		} else {
 			if method == "bfs" {
 				// Buat worker pool untuk BFS multiple paths
 
 				bfsJobs, bfsResults := StartBFSMultipleWorkerPool(numWorkers)
 				// Submit jobs
 				go func() {
-				bfsJobs <- BFSMultipleJob{
-					Target:   target,
-					MaxPaths: maxPathsPerTarget,
-					JobID:    1,
-				}
+					bfsJobs <- BFSMultipleJob{
+						Target:   target,
+						MaxPaths: maxPathsPerTarget,
+						JobID:    1,
+					}
 					close(bfsJobs)
 				}()
-				
+
 				resultsJSON := make([]map[string][]string, 0)
 				for result := range bfsResults {
 					if result.Found {
@@ -143,7 +145,7 @@ func main() {
 				jsonResult, _ := json.Marshal(resultsJSON)
 				c.Data(200, "application/json", jsonResult)
 				return
-			} else if (method == "dfs") {
+			} else if method == "dfs" {
 				dfsJobs, dfsResults := StartDFSMultipleWorkerPool(numWorkers)
 				go func() {
 					dfsJobs <- DFSMultipleJob{
@@ -157,7 +159,7 @@ func main() {
 				for result := range dfsResults {
 					if result.Found {
 						var totalRuntime time.Duration = result.Runtime
-        				var totalNodes int = result.NodesVisited
+						var totalNodes int = result.NodesVisited
 						for i, path := range result.Paths {
 							pathJSON := make(map[string][]string)
 							pathJSON[fmt.Sprintf("Path %d", i+1)] = path
@@ -165,13 +167,18 @@ func main() {
 							resultsJSON[i]["Runtime"] = []string{totalRuntime.String()}
 							resultsJSON[i]["NodesVisited"] = []string{strconv.Itoa(totalNodes)}
 						}
-					}	
+					}
 				}
 				jsonResult, _ := json.Marshal(resultsJSON)
 				c.Data(200, "application/json", jsonResult)
 				return
 			}
 		}
-	})	
-	r.Run(":8080")
+	})
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Printf("Starting server on port %s\n", port)
+	log.Fatal(r.Run(":" + port))
 }
