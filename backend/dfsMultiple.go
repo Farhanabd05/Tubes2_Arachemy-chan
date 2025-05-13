@@ -24,6 +24,7 @@ type JobResultDFS struct {
 	Steps    []string
 	Err      error
 	Duration time.Duration
+    NodesVisited int           `json:"nodesVisited"`
 }
 
 // Globals
@@ -137,6 +138,7 @@ func worker(id int, jobs <-chan Job, results chan<- JobResultDFS, wg *sync.WaitG
 				Found:    r.Found,
 				Steps:    r.Steps,
 				Duration: r.Runtime,
+                NodesVisited: r.NodesVisited,
 			}
 		}
 	}

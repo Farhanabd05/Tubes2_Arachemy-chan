@@ -167,7 +167,7 @@ func main() {
 						pathJSON := make(map[string][]string)
 						pathJSON[fmt.Sprintf("Path %d", printed+1)] = res.Steps
 						pathJSON["Runtime"] = []string{res.Duration.String()}
-						pathJSON["NodesVisited"] = []string{strconv.Itoa(len(res.Steps))}
+						pathJSON["NodesVisited"] = []string{strconv.Itoa(res.NodesVisited)}
 						resultsJSON = append(resultsJSON, pathJSON)
 						printed++
 						if printed >= maxResults {
