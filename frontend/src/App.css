@@ -51,3 +51,56 @@ ol {
   text-align: left;
   margin-top: 1rem;
 }
+
+.vertical-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem; /* space between children */
+}
+
+.tree-container {
+  width: 100%;
+  height: 500px;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 16px;
+  background-color: #f9f9f9;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.search-form {
+  display: flex;
+  flex-direction: row; 
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.search-form input,
+.search-form button,
+.search-form .react-select-container {
+  font-family: inherit;
+  font-size: 1rem;
+  width: auto;
+  min-width: 120px;
+  box-sizing: border-box;
+}
+
+.react-select-container {
+  min-width: 100%;
+}
+
+.react-select__control {
+  background-color: #2b2b2b;
+  color: white;
+  border: 1px solid #ccc;
+}
+
+.react-select__menu {
+  background-color: #2b2b2b;
+  color: white;
+}
