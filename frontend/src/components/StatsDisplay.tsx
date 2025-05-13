@@ -14,7 +14,7 @@ export const StatsDisplay: React.FC<{ runtime?: string; nodesVisited?: number | 
           backgroundColor: '#f9f9f9',
           textAlign: 'center'
         }}>
-          <strong>Runtime:</strong> {runtime} ns
+          <strong>Runtime:</strong> {runtime}
         </div>
       )}
       {nodesVisited !== null && (

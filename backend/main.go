@@ -71,7 +71,7 @@ func main() {
 					result := Result{
 						Found:        ok,
 						Steps:        steps,
-						Runtime:      runtime,
+						Runtime:      runtime.String(),
 						NodesVisited: nodesVisited,
 					}
 					jsonResult, _ := json.Marshal(result)
@@ -82,7 +82,7 @@ func main() {
 					result := Result{
 						Found:        ok,
 						Steps:        steps,
-						Runtime:      runtimes,
+						Runtime:      runtimes.String(),
 						NodesVisited: nodes,
 					}
 					jsonResult, _ := json.Marshal(result)
@@ -95,7 +95,7 @@ func main() {
 					result := Result{
 						Found:        ok,
 						Steps:        steps,
-						Runtime:      runtime,
+						Runtime:      runtime.String(),
 						NodesVisited: nodesVisited,
 					}
 					jsonResult, _ := json.Marshal(result)
@@ -106,7 +106,7 @@ func main() {
 					result := Result{
 						Found:        ok,
 						Steps:        steps,
-						Runtime:      runtime,
+						Runtime:      runtime.String(),
 						NodesVisited: nodesVisited,
 					}
 					jsonResult, _ := json.Marshal(result)

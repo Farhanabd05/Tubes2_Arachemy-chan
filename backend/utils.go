@@ -27,7 +27,7 @@ type Job struct {
 type Result struct {
 	Found bool     `json:"found"`
 	Steps []string `json:"steps"`
-	Runtime time.Duration `json:"runtime"`
+	Runtime string `json:"runtime"`
 	NodesVisited int `json:"nodesVisited"`
 }
 
