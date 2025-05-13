@@ -86,8 +86,14 @@ function buildTreeFromSteps(steps: string[]): TreeNode {
   const stepToNode = (index: number): { node: TreeNode; indexUsed: number } => {
     const { left, right, result } = parsedSteps[index];
 
-    const rightResult = findNodeFromName(right, index);
-    const leftResult = findNodeFromName(left, rightResult.indexUsed);
+    let leftResult, rightResult;
+    if (index === 0 || parsedSteps[index - 1].result == right) {
+      rightResult = findNodeFromName(right, index);
+      leftResult = findNodeFromName(left, rightResult.indexUsed);
+    } else {
+      leftResult = findNodeFromName(left, index);
+      rightResult = findNodeFromName(right, leftResult.indexUsed);
+    }
 
     const minUsed = Math.min(leftResult.indexUsed, rightResult.indexUsed);
 
