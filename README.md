@@ -6,6 +6,10 @@ A web application that implements BFS and DFS algorithms to find crafting paths 
 [![React Version](https://img.shields.io/badge/React-18+-61DAFB?logo=react)](https://reactjs.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
+## 🌐 Explore the Application
+
+Check out the live demo: [Arachemy-chan Web App](https://frontend-production-c72f.up.railway.app/)
+
 ## ✨ Features
 
 - 🕵️‍♀️ **Dual algorithm support** (BFS & DFS)
@@ -123,9 +127,7 @@ A web application that implements BFS and DFS algorithms to find crafting paths 
    ```bash
    sudo snap install go --classic
    ```
-
-
-
+   
 ## 🚀 Running the Application
 
 ### Using Docker
