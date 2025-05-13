@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
+import { SearchForm } from './components/SearchForm';
+import { SingleResultDisplay } from './components/SingleResultDisplay';
+import { MultipleResultDisplay } from './components/MultipleResultDisplay';
+import { StatsDisplay } from './components/StatsDisplay';
+import TreeComponent from './components/TreeComponent';
 
 // Define types for the recipe data
 interface Recipe {
@@ -17,9 +22,7 @@ interface ScrapeResponse {
 interface SingleResult {
   found: boolean;
   steps: string[];
-
 }
-
 type PathObject = { [key: string]: string[] };
 type MultipleResult = PathObject[];
 
@@ -35,9 +38,9 @@ function App() {
   const [numberRecipe, setNumberRecipe] = useState('');
   const [runtime, setRuntime] = useState('');
   const [nodesVisited, setNodesVisited] = useState<number | null>(null);
+
   const findCombination = async () => {
     if (!target) return;
-
     setLoading(true);
     setResult(null);
     setIsMultiple(false);
@@ -45,14 +48,9 @@ function App() {
     try {
       const res = await fetch(`http://localhost:8080/find?target=${target}&method=${method}&numberRecipe=${numberRecipe}`);
       const data = await res.json();
+      setResult(data);
+      setIsMultiple(Array.isArray(data));
 
-      if (Array.isArray(data)) {
-        setResult(data);
-        setIsMultiple(true);
-      } else {
-        setResult(data);
-        setIsMultiple(false);
-      }
       if (data.runtime !== undefined) setRuntime(data.runtime);
       if (data.nodesVisited !== undefined) setNodesVisited(data.nodesVisited);
     } catch (error) {
@@ -97,92 +95,37 @@ function App() {
 
   return (
     <div className="App">
-      <header>
-        <h1>Little Alchemy 2 Path Finder</h1>
-      </header>
-      
-      {/* Scraping status indicator */}
-      {scrapingStatus === 'loading' && <p>⏳ Mengambil data resep...</p>}
-      {scrapingStatus === 'error' && 
-        <p>❌ Error mengambil data. Silakan refresh halaman untuk mencoba lagi.</p>
-      }
-      {scrapingStatus === 'success' && 
-        <p>✅ Berhasil mengambil {recipes.length} resep!</p>
-      }
-      <input
-        value={target}
-        onChange={(e) => setTarget(e.target.value)}
-        placeholder="Contoh: human"
-      />
-      <input
-        value={method}
-        onChange={(e) => setMethod(e.target.value)}
-        placeholder="Contoh: bfs"
-      />
-      <input
-        value={numberRecipe}
-        onChange={(e) => setNumberRecipe(e.target.value)}
-        placeholder="Contoh: 3"
-      />
-      <button onClick={findCombination} disabled={loading || !target || scrapingStatus !== 'success'}>Cari</button>
-      {loading && <p>⏳ Mencari...</p>}
-      {!loading && result && !isFound() && <p>❌ Tidak Ditemukan</p>}
-      {!loading && result && isFound() && (
-        <div>
-          <h2>✅ Ditemukan!</h2>
-          {!isMultiple && (
-            <ul>
-              {(result as SingleResult).steps.map((step, i) => (
-                <li key={i}>{i}. 🧪 {step}</li>
-              ))}
-            </ul>
-          )}
-          {isMultiple && (
-            <div className="multiple-results">
-              {(result as MultipleResult).map((pathObj, i) => {
-                const pathName = Object.keys(pathObj).find(key => key.startsWith('Path'));
-
-                var steps
-                if (pathName !== undefined) {
-                    steps = pathObj[pathName];
-                    // ...
-                  } else {
-                    // Handle the case where pathName is undefined
-                  }
-                  const runtime = pathObj['Runtime']?.[0] || '';
-                  const nodesVisited = pathObj['NodesVisited']?.[0] || '';
-
-                return (
-                  <div key={i}>
-                    <h3>{pathName}</h3>
-                    <ul>
-                      {steps?.map((steps, j) => (
-                        <li key={j}>{j}. 🧪 {steps}</li>
-                      ))}
-                    </ul>
-                    {runtime && (
-                      <p><strong>Runtime:</strong> {runtime}</p>
-                    )}
-                    {nodesVisited && (
-                      <p><strong>Nodes Visited:</strong> {nodesVisited}</p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {runtime && (!isMultiple) && (
-            <div>
-              <strong>Runtime:</strong> {runtime} ns
-            </div>
-          )}
-          {nodesVisited !== null && (!isMultiple) && (
-            <div>
-              <strong>Nodes Visited:</strong> {nodesVisited}
-            </div>
-          )}
-        </div>
-      )}
+      <div className="vertical-stack">
+        <header>
+          <h1>Little Alchemy 2 Path Finder</h1>
+        </header>
+        
+        {/* Scraping status indicator */}
+        {scrapingStatus === 'loading' && <p>⏳ Mengambil data resep...</p>}
+        {scrapingStatus === 'error' && 
+          <p>❌ Error mengambil data. Silakan refresh halaman untuk mencoba lagi.</p>
+        }
+        {scrapingStatus === 'success' && 
+          <p>✅ Berhasil mengambil {recipes.length} resep!</p>
+        }
+        <SearchForm
+          target={target}
+          setTarget={setTarget}
+          method={method}
+          setMethod={setMethod}
+          numberRecipe={numberRecipe}
+          setNumberRecipe={setNumberRecipe}
+          onSearch={findCombination}
+        />
+        {loading && <p>⏳ Mencari...</p>}
+        {!loading && result && !isFound() && <p>❌ Tidak Ditemukan</p>}
+        {!loading && result && isFound() && (
+          <div>
+            <h2>✅ Ditemukan!</h2>
+            {!isMultiple && <SingleResultDisplay result={result as SingleResult} />}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
