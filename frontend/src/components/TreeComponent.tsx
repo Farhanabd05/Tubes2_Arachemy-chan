@@ -2,70 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import Tree from 'react-d3-tree';
 import '../App.css';
 
-const testTreeData = [
-  {
-    name: 'Blade',
-    children: [ {imageUrl: 'https://png.pngtree.com/png-vector/20190418/ourmid/pngtree-vector-plus-icon-png-image_956060.jpg', children: [
-      {
-        name: 'Stone',
-        children: [ {imageUrl: 'https://png.pngtree.com/png-vector/20190418/ourmid/pngtree-vector-plus-icon-png-image_956060.jpg', children: [
-          {
-            name: 'Earth',
-          },
-          {
-            name: 'Pressure',
-            children: [ {imageUrl: 'https://png.pngtree.com/png-vector/20190418/ourmid/pngtree-vector-plus-icon-png-image_956060.jpg', children: [
-              {
-                name: 'Air'
-              },
-              {
-                name: 'Air'
-              }
-            ]}]
-          }
-        ]}]
-      },
-      {
-        name: 'Metal',
-        imageLocal: '',
-        children: [ {imageUrl: 'https://png.pngtree.com/png-vector/20190418/ourmid/pngtree-vector-plus-icon-png-image_956060.jpg', children: [
-          {
-            name: 'Stone',
-            children: [ {imageUrl: 'https://png.pngtree.com/png-vector/20190418/ourmid/pngtree-vector-plus-icon-png-image_956060.jpg', children: [
-              {
-                name: 'Earth',
-              },
-              {
-                name: 'Pressure',
-                children: [ {imageUrl: 'https://png.pngtree.com/png-vector/20190418/ourmid/pngtree-vector-plus-icon-png-image_956060.jpg', children: [
-                  {
-                    name: 'Air'
-                  },
-                  {
-                    name: 'Air'
-                  }
-                ]}]
-              }
-            ]}]
-          },
-          {
-            name: 'Fire'
-          }
-        ]}]
-      }
-    ]}]
-  }
-];
-
-const testStepData = [
-  "air + air = pressure",
-  "earth + pressure = stone",
-  "air + data = pressure",
-  "earth + pressure = stone",
-  "stone + fire = metal",
-  "stone + metal = blade"
-];
-
 type Step = { left: string; right: string; result: string };
 
 type TreeNode = {
@@ -74,10 +10,21 @@ type TreeNode = {
   imageUrl?: string;
 };
 
+let elementImageMap: Record<string, string> = {};
+async function loadElementImageMap() {
+  if (Object.keys(elementImageMap).length === 0) {
+    const response = await fetch('/mapped_elements.json');
+    const data = await response.json();
+    for (const entry of data) {
+      elementImageMap[entry.Element.toLowerCase()] = `/images/${entry.ElementImage}`;
+    }
+  }
+}
+
 function parseStep(step: string): Step {
   const [leftRight, result] = step.split(" = ");
   const [left, right] = leftRight.split(" + ");
-  return { left, right, result };
+  return { left: left.trim(), right: right.trim(), result: result.trim() };
 }
 
 function buildTreeFromSteps(steps: string[]): TreeNode {
@@ -87,7 +34,7 @@ function buildTreeFromSteps(steps: string[]): TreeNode {
     const { left, right, result } = parsedSteps[index];
 
     let leftResult, rightResult;
-    if (index === 0 || parsedSteps[index - 1].result == right) {
+    if (index === 0 || parsedSteps[index - 1].result === right) {
       rightResult = findNodeFromName(right, index);
       leftResult = findNodeFromName(left, rightResult.indexUsed);
     } else {
@@ -97,13 +44,16 @@ function buildTreeFromSteps(steps: string[]): TreeNode {
 
     const minUsed = Math.min(leftResult.indexUsed, rightResult.indexUsed);
 
+    const imageUrl = elementImageMap[result?.toLowerCase()] ?? "/images/default.svg";
+
     const node: TreeNode = {
-      name: result,
+      name: result || "Unknown",
+      imageUrl,
       children: [
         {
-          name: 'plus',
-          imageUrl: './public/images/plus.png',
-          children: [leftResult.node, rightResult.node],
+          name: "plus",
+          imageUrl: "/images/plus.png",
+          children: [leftResult.node, rightResult.node].filter(Boolean),
         },
       ],
     };
@@ -117,16 +67,27 @@ function buildTreeFromSteps(steps: string[]): TreeNode {
         return stepToNode(i);
       }
     }
-    return { node: { name }, indexUsed: beforeIndex }; // base/raw element
+
+    const fallbackImage = elementImageMap[name?.toLowerCase()] ?? "/images/default.svg";
+    if (!(name?.toLowerCase() in elementImageMap)) {
+      console.warn(`⚠️ No image mapping for element: ${name}`);
+    }
+
+    const fallbackNode: TreeNode = {
+      name: name || "Unknown",
+      imageUrl: fallbackImage,
+    };
+    return { node: fallbackNode, indexUsed: beforeIndex };
   };
 
-  return stepToNode(parsedSteps.length - 1).node;
+  const root = stepToNode(parsedSteps.length - 1).node;
+  console.log("✅ Final Tree:", JSON.stringify(root, null, 2));
+  return root;
 }
 
 const CircleImage = ({ imageUrl }: { imageUrl: string }) => (
   <foreignObject width={50} height={50} x={-25} y={-25}>
     <div
-      // xmlns="http://www.w3.org/1999/xhtml"
       style={{
         width: '100%',
         height: '100%',
@@ -147,15 +108,13 @@ const CircleImage = ({ imageUrl }: { imageUrl: string }) => (
         }}
       />
     </div>
-    </foreignObject>
+  </foreignObject>
 );
 
 const renderNode = ({ nodeDatum }: { nodeDatum: any }) => {
-
   return (
     <g>
       {nodeDatum.name != 'plus' ? (
-        // Box layout (image + text)
         <foreignObject width={150} height={60} x={-75} y={-30}>
           <div
             style={{
@@ -192,7 +151,6 @@ const renderNode = ({ nodeDatum }: { nodeDatum: any }) => {
           </div>
         </foreignObject>
       ) : (
-        // Circular image-only layout
         <CircleImage imageUrl={nodeDatum.imageUrl} />
       )}
     </g>
@@ -221,8 +179,7 @@ export const TreeComponent: React.FC<{ steps: string[] }> = ({ steps }) => {
   const treeContainerRef = useRef<HTMLDivElement>(null);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-
-  const treeData = [buildTreeFromSteps(steps)];
+  const [treeData, setTreeData] = useState<TreeNode[]>([]);
 
   useEffect(() => {
     const container = treeContainerRef.current;
@@ -231,28 +188,35 @@ export const TreeComponent: React.FC<{ steps: string[] }> = ({ steps }) => {
     const { width, height } = container.getBoundingClientRect();
     setTranslate({ x: width / 2, y: 100 });
 
-    const stats = calculateTreeStats(treeData[0]);
-    const zoomX = width / (NODE_WIDTH * stats.maxWidth);
-    const zoomY = height / (NODE_HEIGHT * stats.depth);
-    const finalZoom = Math.min(zoomX, zoomY) * 0.9;
+    (async () => {
+      await loadElementImageMap();
+      const tree = buildTreeFromSteps(steps);
+      const stats = calculateTreeStats(tree);
+      const zoomX = width / (NODE_WIDTH * stats.maxWidth);
+      const zoomY = height / (NODE_HEIGHT * stats.depth);
+      const finalZoom = Math.min(zoomX, zoomY) * 0.9;
 
-    setZoom(finalZoom);
+      setTreeData([tree]);
+      setZoom(finalZoom);
+    })();
   }, [steps]);
 
   return (
     <div ref={treeContainerRef} className="tree-container" style={{ width: "90%", height: "80vh" }}>
-      <Tree
-        data={treeData}
-        orientation="vertical"
-        pathFunc="step"
-        collapsible={false}
-        enableLegacyTransitions={true}
-        renderCustomNodeElement={renderNode}
-        nodeSize={{ x: NODE_WIDTH, y: NODE_HEIGHT }}
-        separation={{ siblings: 1, nonSiblings: 1.2 }}
-        zoom={zoom}
-        translate={translate}
-      />
+      {treeData.length > 0 && (
+        <Tree
+          data={treeData}
+          orientation="vertical"
+          pathFunc="step"
+          collapsible={false}
+          enableLegacyTransitions={true}
+          renderCustomNodeElement={renderNode}
+          nodeSize={{ x: NODE_WIDTH, y: NODE_HEIGHT }}
+          separation={{ siblings: 1, nonSiblings: 1.2 }}
+          zoom={zoom}
+          translate={translate}
+        />
+      )}
     </div>
   );
 };
