@@ -69,7 +69,7 @@ const testStepData = [
 type Step = { left: string; right: string; result: string };
 
 type TreeNode = {
-  name?: string;
+  name: string;
   children?: TreeNode[];
   imageUrl?: string;
 };
@@ -95,6 +95,7 @@ function buildTreeFromSteps(steps: string[]): TreeNode {
       name: result,
       children: [
         {
+          name: 'plus',
           imageUrl: 'https://png.pngtree.com/png-vector/20190418/ourmid/pngtree-vector-plus-icon-png-image_956060.jpg',
           children: [leftResult.node, rightResult.node],
         },

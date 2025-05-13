@@ -143,7 +143,7 @@ function App() {
           setMethod={setMethod}
           numberRecipe={numberRecipe}
           setNumberRecipe={setNumberRecipe}
-          bidirectional={false} 
+          bidirectional={bidirectional} 
           setBidirectional={setBidirectional}
           onSearch={findCombination}
           />

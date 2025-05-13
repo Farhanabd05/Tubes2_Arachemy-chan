@@ -4,29 +4,31 @@ interface SearchFormProps {
   target: string;
   method: string;
   numberRecipe: string;
+  bidirectional: boolean;
   setTarget: (val: string) => void;
   setMethod: (val: string) => void;
   setNumberRecipe: (val: string) => void;
+  setBidirectional: (val: boolean) => void;
   onSearch: () => void;
 }
 
 const customSelectStyles = {
-  control: (base) => ({
+  control: (base: any) => ({
     ...base,
     backgroundColor: '#2b2b2b',
     color: 'white',
     borderColor: '#555',
   }),
-  singleValue: (base) => ({
+  singleValue: (base: any) => ({
     ...base,
     color: 'white',
   }),
-  menu: (base) => ({
+  menu: (base: any) => ({
     ...base,
     backgroundColor: '#2b2b2b',
     color: 'white',
   }),
-  option: (base, { isFocused, isSelected }) => ({
+  option: (base: any, { isFocused, isSelected }: any) => ({
     ...base,
     backgroundColor: isSelected
       ? '#555'
@@ -36,7 +38,7 @@ const customSelectStyles = {
     color: 'white',
     cursor: 'pointer',
   }),
-  input: (base) => ({
+  input: (base: any) => ({
     ...base,
     color: 'white',
   }),
@@ -51,9 +53,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   target,
   method,
   numberRecipe,
+  bidirectional,
   setTarget,
   setMethod,
   setNumberRecipe,
+  setBidirectional,
   onSearch,
 }) => (
   <div className="search-form">
@@ -77,6 +81,18 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       min={1}
       step={1}
     />
+    <div className="form-group">
+        {numberRecipe === '1' && (
+          <label>
+            <input
+              type="checkbox"
+              checked={bidirectional}
+              onChange={(e) => setBidirectional(e.target.checked)}
+            />
+            Gunakan Bidirectional Search
+          </label>
+        )}
+      </div>
     <button onClick={onSearch}>Cari</button>
   </div>
 );
