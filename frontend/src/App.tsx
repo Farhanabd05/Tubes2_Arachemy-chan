@@ -108,7 +108,7 @@ function App() {
         <p>❌ Error mengambil data. Silakan refresh halaman untuk mencoba lagi.</p>
       }
       {scrapingStatus === 'success' && 
-        <p>✅ Berhasil mengambil {recipes.length} resep!</p>
+        <p>✅ Berhasil mengambil resep!</p>
       }
       <input
         value={target}
