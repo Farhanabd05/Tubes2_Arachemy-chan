@@ -74,7 +74,6 @@ type TreeNode = {
   imageUrl?: string;
 };
 
-// Parsing function
 function parseStep(step: string): Step {
   const [leftRight, result] = step.split(" = ");
   const [left, right] = leftRight.split(" + ");
@@ -214,6 +213,18 @@ function calculateTreeStats(node: any, depth = 0, levels: number[] = []): { dept
   return { depth: levels.length, maxWidth: Math.max(...levels) };
 }
 
+useEffect(() => {
+  if (treeContainerRef.current) {
+    const { offsetWidth, offsetHeight } = treeContainerRef.current;
+
+    // Center the tree by default
+    setTranslate({
+      x: offsetWidth / 2,
+      y: offsetHeight / 10 // you can tweak this
+    });
+  }
+}, [treeData]); // make sure it updates when data changes
+
 export const TreeComponent: React.FC<{ steps: string[] }> = ({ steps }) => {
   const treeContainerRef = useRef<HTMLDivElement>(null);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
@@ -237,7 +248,7 @@ export const TreeComponent: React.FC<{ steps: string[] }> = ({ steps }) => {
   }, [steps]);
 
   return (
-    <div ref={treeContainerRef} className="tree-container" style={{ width: "100%", height: "100vh" }}>
+    <div ref={treeContainerRef} className="tree-container" style={{ width: "90%", height: "80vh" }}>
       <Tree
         data={treeData}
         orientation="vertical"

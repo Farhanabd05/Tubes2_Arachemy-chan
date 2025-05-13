@@ -22,7 +22,10 @@ interface ScrapeResponse {
 interface SingleResult {
   found: boolean;
   steps: string[];
+  runtime?: string; 
+  nodesVisited?: number | null;
 }
+
 type PathObject = { [key: string]: string[] };
 type MultipleResult = PathObject[];
 
@@ -123,6 +126,7 @@ function App() {
           <div>
             <h2>✅ Ditemukan!</h2>
             {!isMultiple && <SingleResultDisplay result={result as SingleResult} />}
+            {isMultiple && <MultipleResultDisplay results={result as MultipleResult} />}
           </div>
         )}
       </div>
