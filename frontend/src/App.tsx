@@ -24,7 +24,7 @@ type PathObject = { [key: string]: string[] };
 type MultipleResult = PathObject[];
 
 function App() {
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_HOST as string;
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL as string;
   // State for scraping status
   const [scrapingStatus, setScrapingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
