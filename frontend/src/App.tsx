@@ -24,6 +24,7 @@ type PathObject = { [key: string]: string[] };
 type MultipleResult = PathObject[];
 
 function App() {
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL as string;
   // State for scraping status
   const [scrapingStatus, setScrapingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -43,7 +44,7 @@ function App() {
     setIsMultiple(false);
 
     try {
-      const res = await fetch(`http://localhost:8080/find?target=${target}&method=${method}&numberRecipe=${numberRecipe}`);
+      const res = await fetch(`${BACKEND_URL}/find?target=${target}&method=${method}&numberRecipe=${numberRecipe}`);
       const data = await res.json();
 
       if (Array.isArray(data)) {
@@ -82,7 +83,7 @@ function App() {
         setScrapingStatus('loading');
         console.log('Scraping data from API...');
         
-        const response = await axios.get<ScrapeResponse>('http://localhost:8080/scrape');
+        const response = await axios.get<ScrapeResponse>(`${BACKEND_URL}/scrape`);
         setRecipes(response.data.data);
         setScrapingStatus('success');
         console.log(`Successfully scraped ${response.data.data.length} recipes`);
