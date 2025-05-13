@@ -36,6 +36,10 @@ export const MultipleResultDisplay: React.FC<{ results: MultipleResult }> = ({ r
 
   return (
     <div>
+      
+
+      <StatsDisplay runtime={currentResult.runtime} nodesVisited={currentResult.nodesVisited} />
+      <TreeComponent steps={currentResult.steps} />
       <div style={{ marginBottom: '1rem' }}>
         <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
           Previous
@@ -50,9 +54,6 @@ export const MultipleResultDisplay: React.FC<{ results: MultipleResult }> = ({ r
           Next
         </button>
       </div>
-
-      <StatsDisplay runtime={currentResult.runtime} nodesVisited={currentResult.nodesVisited} />
-      <TreeComponent steps={currentResult.steps} />
     </div>
   );
 };

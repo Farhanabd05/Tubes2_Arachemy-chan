@@ -102,7 +102,7 @@ function buildTreeFromSteps(steps: string[]): TreeNode {
       children: [
         {
           name: 'plus',
-          imageUrl: 'https://png.pngtree.com/png-vector/20190418/ourmid/pngtree-vector-plus-icon-png-image_956060.jpg',
+          imageUrl: './public/images/plus.png',
           children: [leftResult.node, rightResult.node],
         },
       ],
@@ -124,41 +124,37 @@ function buildTreeFromSteps(steps: string[]): TreeNode {
 }
 
 const CircleImage = ({ imageUrl }: { imageUrl: string }) => (
-  <foreignObject width={60} height={60} x={-30} y={-30}>
+  <foreignObject width={50} height={50} x={-25} y={-25}>
     <div
+      // xmlns="http://www.w3.org/1999/xhtml"
       style={{
         width: '100%',
         height: '100%',
-        borderRadius: '50%',
-        overflow: 'hidden',
-        border: '2px solid #4A90E2',
-        backgroundColor: '#000',
+        clipPath: 'circle(50% at 50% 50%)',
+        backgroundColor: '#4CAF50',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      {imageUrl && (
-        <img
-          src={imageUrl}
-          alt=""
-          style={{
-            width: '80%',
-            height: '80%',
-            objectFit: 'cover',
-          }}
-        />
-      )}
+      <img
+        src={imageUrl}
+        alt=""
+        style={{
+          width: '60%',
+          height: '60%',
+          objectFit: 'cover',
+        }}
+      />
     </div>
-  </foreignObject>
+    </foreignObject>
 );
 
 const renderNode = ({ nodeDatum }: { nodeDatum: any }) => {
-  const hasName = Boolean(nodeDatum.name);
 
   return (
     <g>
-      {hasName ? (
+      {nodeDatum.name != 'plus' ? (
         // Box layout (image + text)
         <foreignObject width={150} height={60} x={-75} y={-30}>
           <div
@@ -167,12 +163,13 @@ const renderNode = ({ nodeDatum }: { nodeDatum: any }) => {
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '12px',
-              border: '2px solid #4A90E2',
-              background: '#000',
+              border: '2px solid #212121',
+              background: ' #00BCD4',
               padding: '8px',
               color: 'white',
               fontSize: '14px',
               fontFamily: 'sans-serif',
+              fontWeight: 'bold',
               width: '100%',
               height: '100%',
               boxSizing: 'border-box',

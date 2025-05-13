@@ -93,6 +93,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           </label>
         )}
       </div>
-    <button onClick={onSearch}>Cari</button>
+    <button 
+      onClick={onSearch} 
+      style={{ backgroundColor: '#4CAF50', color: '#F5F5F5' }}
+    >
+      Cari
+    </button>
   </div>
 );
