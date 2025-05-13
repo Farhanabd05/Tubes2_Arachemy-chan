@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 )
 
 // Recipe represents a single recipe from the JSON file
@@ -29,18 +28,6 @@ type Result struct {
 	Steps []string `json:"steps"`
 	Runtime string `json:"runtime"`
 	NodesVisited int `json:"nodesVisited"`
-}
-
-// JobResult contains the result of a processed job
-type JobResult struct {
-	JobID    int
-	WorkerID int
-	JobType  string
-	Target   string
-	Found    bool
-	Steps    []string
-	Err      error
-	Duration time.Duration // Added to track job execution time
 }
 
 // Global variables for recipe data
