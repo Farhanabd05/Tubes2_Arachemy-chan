@@ -35,6 +35,16 @@ function App() {
   const [numberRecipe, setNumberRecipe] = useState('');
   const [runtime, setRuntime] = useState('');
   const [nodesVisited, setNodesVisited] = useState<number | null>(null);
+  // New state for bidirectional toggle
+  const [bidirectional, setBidirectional] = useState(false);
+
+  // Tambahkan useEffect untuk handle reset bidirectional
+  useEffect(() => {
+    if (numberRecipe !== '1') {
+      setBidirectional(false);
+    }
+  }, [numberRecipe]);
+  
   const findCombination = async () => {
     if (!target) return;
 
@@ -43,7 +53,21 @@ function App() {
     setIsMultiple(false);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/find?target=${target}&method=${method}&numberRecipe=${numberRecipe}`);
+      // Buat objek URLSearchParams
+      const params = new URLSearchParams({
+        target: target,
+        method: method,
+        numberRecipe: numberRecipe,
+      });
+
+      // Tambahkan parameter bidirectional jika memenuhi syarat
+      if (numberRecipe === '1' && bidirectional) {
+        params.append('bidirectional', 'true');
+      }
+      
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/find?${params.toString()}`
+      );
       const data = await res.json();
 
       if (Array.isArray(data)) {
@@ -126,6 +150,18 @@ function App() {
         onChange={(e) => setNumberRecipe(e.target.value)}
         placeholder="Contoh: 3"
       />
+      <div className="form-group">
+        {numberRecipe === '1' && (
+          <label>
+            <input
+              type="checkbox"
+              checked={bidirectional}
+              onChange={(e) => setBidirectional(e.target.checked)}
+            />
+            Gunakan Bidirectional Search
+          </label>
+        )}
+      </div>
       <button onClick={findCombination} disabled={loading || !target || scrapingStatus !== 'success'}>Cari</button>
       {loading && <p>⏳ Mencari...</p>}
       {!loading && result && !isFound() && <p>❌ Tidak Ditemukan</p>}

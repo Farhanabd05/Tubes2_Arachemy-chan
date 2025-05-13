@@ -2,176 +2,203 @@ package main
 
 import (
 	"fmt"
+	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 )
 
-// Tipe data untuk job pencarian BFS multiple path
-type BFSMultipleJob struct {
-    Target   string
-    MaxPaths int
-    JobID    int
-}
-
-// Tipe data untuk hasil pencarian
-type BFSMultipleResult struct {
-    Target   string
-    Paths    [][]string
-    Found    bool
-    JobID    int
-    Runtime time.Duration `json:"runtime"`
-    NodesVisited int           `json:"nodesVisited"`
-}
-
-func bfsMultiplePaths(target string, maxPaths int) ([][]string, bool, int) {
+func bfsMultiplePaths(target string, maxPaths int) ([][]string, bool,time.Duration, int) {
     target = strings.ToLower(target)
-    nodesVisited := 0
-    // Cek apakah target adalah elemen dasar
+    start := time.Now()
     if baseElements[target] {
-        return [][]string{{}}, true, 0
+        return [][]string{{}}, true, 0, 0
     }
-    
-    // Untuk menyimpan multiple path ke setiap elemen
-    pathsToElement := make(map[string][][]string)
-    discovered := make(map[string]bool)
-    
-    // Inisialisasi dengan elemen dasar
+
+    type nodeInfo struct {
+        predecessors [][2]string
+        level        int
+        sync.Mutex
+    }
+
+    var (
+        elementInfo   = make(map[string]*nodeInfo)
+        elementInfoMu sync.RWMutex // Mutex khusus untuk elementInfo
+        queue         []string
+        queueMu       sync.Mutex
+        nodesVisited  int
+        found         bool
+        foundMu       sync.Mutex
+    )
+
+    // Inisialisasi base elements dengan lock
+    elementInfoMu.Lock()
     for base := range baseElements {
-        discovered[base] = true
-        pathsToElement[base] = [][]string{{}} // Empty path untuk elemen dasar
+        elementInfo[base] = &nodeInfo{level: 0}
+        queue = append(queue, base)
         nodesVisited++
     }
-    
-    // Implementasi BFS
-    iteration := 0
-    
-    for {
-        iteration++
-        newDiscoveries := false
-        mutex.RLock() // Lock untuk akses ke recipe maps
+    elementInfoMu.Unlock()
+
+    // BFS level per level
+    for len(queue) > 0 && !found {
+        levelSize := len(queue)
+        workCh := make(chan string, levelSize)
         
-        for resultElement, recipes := range recipesMap {
-            // Skip elemen yang sudah diproses
-            if _, ok := pathsToElement[resultElement]; ok {
-                continue
-            }
-            
-            resultTier := tierMap[resultElement]
-            pathsForElement := [][]string{}
-            
-            for _, ingredients := range recipes {
-                ingr1 := ingredients[0]
-                ingr2 := ingredients[1]
-                
-                // Cek apakah kedua ingredients sudah ditemukan
-                if paths1, ok1 := pathsToElement[ingr1]; ok1 {
-                    if paths2, ok2 := pathsToElement[ingr2]; ok2 {
-                        // Cek constraint tier
-                        if tierMap[ingr1] >= resultTier || tierMap[ingr2] >= resultTier {
-                            continue
-                        }
-                        
-                        // Kombinasikan path dari kedua ingredients
-                        for _, p1 := range paths1 {
-                            for _, p2 := range paths2 {
-                                newPath := make([]string, len(p1)+len(p2)+1)
-                                copy(newPath, p1)
-                                copy(newPath[len(p1):], p2)
-                                
-                                // Tambahkan langkah kombinasi
-                                newPath[len(newPath)-1] = fmt.Sprintf("%s + %s = %s", ingr1, ingr2, resultElement)
-                                
-                                // Tambahkan path ke hasil
-                                pathsForElement = append(pathsForElement, newPath)
-                                
-                                // Batasi jumlah path per elemen
-                                if len(pathsForElement) >= maxPaths {
-                                    break
+        for _, node := range queue {
+            workCh <- node
+        }
+        close(workCh)
+        
+        queue = []string{}
+        var wg sync.WaitGroup
+
+        for i := 0; i < runtime.NumCPU(); i++ {
+            wg.Add(1)
+            go func() {
+                defer wg.Done()
+                for current := range workCh {
+                    // Early termination check
+                    foundMu.Lock()
+                    if found {
+                        foundMu.Unlock()
+                        return
+                    }
+                    foundMu.Unlock()
+
+                    // Dapatkan current level dengan lock
+                    elementInfoMu.RLock()
+                    currentInfo, exists := elementInfo[current]
+                    elementInfoMu.RUnlock()
+
+                    if !exists {
+                        continue
+                    }
+
+                    currentInfo.Lock()
+                    currentLevel := currentInfo.level
+                    currentInfo.Unlock()
+
+                    // Buat salinan keys untuk iterasi aman
+                    elementInfoMu.RLock()
+                    keys := make([]string, 0, len(elementInfo))
+                    for k := range elementInfo {
+                        keys = append(keys, k)
+                    }
+                    elementInfoMu.RUnlock()
+
+                    // Proses kombinasi
+                    for _, other := range keys {
+                        mutex.RLock()
+                        for resultElement, recipes := range recipesMap {
+                            for _, ingredients := range recipes {
+                                if (ingredients[0] == current && ingredients[1] == other) ||
+                                    (ingredients[0] == other && ingredients[1] == current) {
+
+                                    // Validasi tier
+                                    if tierMap[ingredients[0]] >= tierMap[resultElement] || 
+                                        tierMap[ingredients[1]] >= tierMap[resultElement] {
+                                        continue
+                                    }
+
+                                    // Penggunaan lock untuk elementInfo
+                                    elementInfoMu.Lock()
+                                    if _, exists := elementInfo[resultElement]; !exists {
+                                        elementInfo[resultElement] = &nodeInfo{
+                                            level: currentLevel + 1,
+                                        }
+                                        queueMu.Lock()
+                                        queue = append(queue, resultElement)
+                                        queueMu.Unlock()
+                                        nodesVisited++
+                                    }
+
+                                    resultInfo := elementInfo[resultElement]
+                                    elementInfoMu.Unlock()
+
+                                    resultInfo.Lock()
+                                    if resultInfo.level == currentLevel+1 {
+                                        resultInfo.predecessors = append(
+                                            resultInfo.predecessors,
+                                            [2]string{current, other},
+                                        )
+                                        
+                                        // Update found dengan lock
+                                        if resultElement == target && len(resultInfo.predecessors) >= maxPaths {
+                                            foundMu.Lock()
+                                            found = true
+                                            foundMu.Unlock()
+                                        }
+                                    }
+                                    resultInfo.Unlock()
                                 }
                             }
-                            
-                            if len(pathsForElement) >= maxPaths {
-                                break
-                            }
                         }
+                        mutex.RUnlock()
                     }
                 }
-            }
-            
-            // Jika menemukan path untuk elemen ini, catat
-            if len(pathsForElement) > 0 {
-                pathsToElement[resultElement] = pathsForElement
-                discovered[resultElement] = true
-                newDiscoveries = true
-                nodesVisited++
-                // Cek apakah ini target
-                if resultElement == target {
-                    mutex.RUnlock()
-                    return pathsForElement[:min(len(pathsForElement), maxPaths)], true, nodesVisited
-                }
-            }
+            }()
         }
-        
-        mutex.RUnlock()
-        
-        // Jika tidak ada penemuan baru, hentikan loop
-        if !newDiscoveries {
-            break
-        }
-    }
-    
-    // Return path jika target ditemukan
-    if paths, ok := pathsToElement[target]; ok {
-        return paths[:min(len(paths), maxPaths)], true, nodesVisited
-    }
-    
-    return [][]string{}, false, nodesVisited
-}
-
-// Worker yang memproses job BFS untuk multiple path
-func bfsMultiplePathsWorker(id int, jobs <-chan BFSMultipleJob, results chan<- BFSMultipleResult, wg *sync.WaitGroup) {
-    defer wg.Done()
-    fmt.Printf("[Worker %d] Started for BFS multiple paths\n", id)
-    
-    for job := range jobs {
-        startTime := time.Now()
-        fmt.Printf("[Worker %d] Processing job %d: Finding paths to %s (max: %d)\n", 
-                  id, job.JobID, job.Target, job.MaxPaths)
-        
-        // Pencarian multiple paths menggunakan BFS
-        paths, found, nodes := bfsMultiplePaths(job.Target, job.MaxPaths)
-        
-        duration := time.Since(startTime)
-        
-        results <- BFSMultipleResult{
-            Target:   job.Target,
-            Paths:    paths,
-            Found:    found,
-            JobID:    job.JobID,
-            Runtime: duration,
-            NodesVisited: nodes,
-        }
-    }
-}
-
-func StartBFSMultipleWorkerPool(numWorkers int) (chan<- BFSMultipleJob, <-chan BFSMultipleResult) {
-    jobs := make(chan BFSMultipleJob, numWorkers*2)     // Buffer untuk jobs
-    results := make(chan BFSMultipleResult, numWorkers*2) // Buffer untuk results
-    
-    var wg sync.WaitGroup
-    
-    // Start workers
-    for i := 0; i < numWorkers; i++ {
-        wg.Add(1)
-        go bfsMultiplePathsWorker(i, jobs, results, &wg)
-    }
-    
-    // Tutup channel results ketika semua worker selesai
-    go func() {
         wg.Wait()
-        close(results)
-    }()
-    
-    return jobs, results
+    }
+
+    // Helper untuk cek duplikasi path
+	isPathExists := func(paths [][]string, newPath []string) bool {
+		for _, p := range paths {
+			if reflect.DeepEqual(p, newPath) {
+				return true
+			}
+		}
+		return false
+	}
+	// Rekonstruksi path dari predecessor
+	var buildPaths func(element string) [][]string
+	buildPaths = func(element string) [][]string {
+		if elementInfo[element].level == 0 {
+			return [][]string{{}}
+		}
+
+		var paths [][]string
+		for _, predecessors := range elementInfo[element].predecessors {
+			for _, p1 := range buildPaths(predecessors[0]) {
+				for _, p2 := range buildPaths(predecessors[1]) {
+					sorted1, sorted2 := normalizeIngredients(predecessors[0], predecessors[1])
+					// Buat path baru
+					newPath := make([]string, len(p1)+len(p2)+1)
+					copy(newPath, p1)
+					copy(newPath[len(p1):], p2)
+					newPath[len(newPath)-1] = fmt.Sprintf("%s + %s = %s", sorted1, sorted2, element)
+					// if sorted1 and sorted 2 already in
+					// Cek duplikasi sebelum append
+					if !isPathExists(paths, newPath) {
+						paths = append(paths, newPath)
+					}
+                    if len(paths) >= maxPaths {
+                        return paths
+                    }
+				}
+			}
+		}
+		return paths
+	}
+
+	if _, exists := elementInfo[target]; !exists {
+		return [][]string{}, false, time.Since(start), nodesVisited
+	}
+
+	allPaths := buildPaths(target)
+	if len(allPaths) > maxPaths {
+		allPaths = allPaths[:maxPaths]
+	}
+
+	return allPaths, true, time.Since(start), nodesVisited
+}
+
+// Tambahkan fungsi helper untuk mengurutkan nama bahan
+func normalizeIngredients(a, b string) (string, string) {
+	if a < b {
+		return a, b
+	}
+	return b, a
 }
