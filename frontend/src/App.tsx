@@ -86,7 +86,9 @@ function App() {
         const response = await axios.get<ScrapeResponse>(`${BACKEND_URL}/scrape`);
         setRecipes(response.data.data);
         setScrapingStatus('success');
-        console.log(`Successfully scrape`);
+        console.log(`Successfully scrape`)
+        // display recipes json
+        console.log(response.data.data);
       } catch (error) {
         console.error('Error during scraping:', error);
         setScrapingStatus('error');
