@@ -41,7 +41,16 @@ function App() {
   const [numberRecipe, setNumberRecipe] = useState('');
   const [runtime, setRuntime] = useState('');
   const [nodesVisited, setNodesVisited] = useState<number | null>(null);
+  // New state for bidirectional toggle
+  const [bidirectional, setBidirectional] = useState(false);
 
+  // Tambahkan useEffect untuk handle reset bidirectional
+  useEffect(() => {
+    if (numberRecipe !== '1') {
+      setBidirectional(false);
+    }
+  }, [numberRecipe]);
+  
   const findCombination = async () => {
     if (!target) return;
     setLoading(true);
@@ -49,7 +58,21 @@ function App() {
     setIsMultiple(false);
 
     try {
-      const res = await fetch(`http://localhost:8080/find?target=${target}&method=${method}&numberRecipe=${numberRecipe}`);
+      // Buat objek URLSearchParams
+      const params = new URLSearchParams({
+        target: target,
+        method: method,
+        numberRecipe: numberRecipe,
+      });
+
+      // Tambahkan parameter bidirectional jika memenuhi syarat
+      if (numberRecipe === '1' && bidirectional) {
+        params.append('bidirectional', 'true');
+      }
+      
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/find?${params.toString()}`
+      );
       const data = await res.json();
       setResult(data);
       setIsMultiple(Array.isArray(data));
@@ -82,11 +105,13 @@ function App() {
       try {
         setScrapingStatus('loading');
         console.log('Scraping data from API...');
-        
-        const response = await axios.get<ScrapeResponse>('http://localhost:8080/scrape');
+        console.log("Backend URL:", import.meta.env.VITE_BACKEND_URL);
+        const response = await axios.get<ScrapeResponse>(`${import.meta.env.VITE_BACKEND_URL}/scrape`);
         setRecipes(response.data.data);
         setScrapingStatus('success');
-        console.log(`Successfully scraped ${response.data.data.length} recipes`);
+        console.log(`Successfully scrape`)
+        // display recipes json
+        console.log(response.data.data);
       } catch (error) {
         console.error('Error during scraping:', error);
         setScrapingStatus('error');
@@ -118,8 +143,10 @@ function App() {
           setMethod={setMethod}
           numberRecipe={numberRecipe}
           setNumberRecipe={setNumberRecipe}
+          bidirectional={false} 
+          setBidirectional={setBidirectional}
           onSearch={findCombination}
-        />
+          />
         {loading && <p>⏳ Mencari...</p>}
         {!loading && result && !isFound() && <p>❌ Tidak Ditemukan</p>}
         {!loading && result && isFound() && (

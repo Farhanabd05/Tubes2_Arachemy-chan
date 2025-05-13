@@ -118,27 +118,16 @@ func main() {
 			if method == "bfs" {
 				// Buat worker pool untuk BFS multiple paths
 
-				bfsJobs, bfsResults := StartBFSMultipleWorkerPool(numWorkers)
-				// Submit jobs
-				go func() {
-					bfsJobs <- BFSMultipleJob{
-						Target:   target,
-						MaxPaths: maxPathsPerTarget,
-						JobID:    1,
-					}
-					close(bfsJobs)
-				}()
+				bfsResults, found, runtime, nodes := bfsMultiplePaths(target, maxPathsPerTarget)
 
 				resultsJSON := make([]map[string][]string, 0)
-				for result := range bfsResults {
-					if result.Found {
-						for i, path := range result.Paths {
-							pathJSON := make(map[string][]string)
-							pathJSON[fmt.Sprintf("Path %d", i+1)] = path
-							resultsJSON = append(resultsJSON, pathJSON)
-							resultsJSON[i]["Runtime"] = []string{result.Runtime.String()}
-							resultsJSON[i]["NodesVisited"] = []string{strconv.Itoa(result.NodesVisited)}
-						}
+				if found {
+					for i, path := range bfsResults {
+						pathJSON := make(map[string][]string)
+						pathJSON[fmt.Sprintf("Path %d", i+1)] = path
+						resultsJSON = append(resultsJSON, pathJSON)
+						resultsJSON[i]["Runtime"] = []string{runtime.String()}
+						resultsJSON[i]["NodesVisited"] = []string{strconv.Itoa(nodes)}
 					}
 				}
 				//
@@ -179,6 +168,6 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	log.Printf("Starting server on port %s\n", port)
-	log.Fatal(r.Run(":" + port))
+	log.Printf("Listening on 0.0.0.0:%s\n", port)
+	log.Fatal(r.Run("0.0.0.0:" + port))
 }
