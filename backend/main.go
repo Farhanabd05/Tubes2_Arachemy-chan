@@ -179,6 +179,6 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	log.Printf("Starting server on port %s\n", port)
-	log.Fatal(r.Run(":" + port))
+	log.Printf("Listening on 0.0.0.0:%s\n", port)
+	log.Fatal(r.Run("0.0.0.0:" + port))
 }
